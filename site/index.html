@@ -40,11 +40,11 @@
       <p>O GitHub Actions executa TikTok + IA Qwen + voz brasileira Piper. Esta página recebe os eventos e o áudio através de uma conexão HTTPS temporária.</p>
       <div class="steps">
         <div class="step"><span class="number">01</span><div><strong>Ative a sessão na nuvem</strong><p>Abra o GitHub Actions e execute <b>Bob Live - IA e voz locais</b> no modo <b>web-live</b>. Use o usuário <b>nexttec_1</b> e modelo <b>qwen2.5:0.5b</b>.</p><a class="underlink" href="https://github.com/danilo631/Bob_live/actions/workflows/bob-live.yml" target="_blank" rel="noopener noreferrer">Abrir workflow de live ↗</a></div></div>
-        <div class="step"><span class="number">02</span><div><strong>Conecte com segurança</strong><p>Copie a URL <b>https://...trycloudflare.com</b> mostrada nos logs do Action e informe a senha cadastrada no Secret <code>BOB_SESSION_KEY</code> do repositório.</p></div></div>
+        <div class="step"><span class="number">02</span><div><strong>Conecte com segurança</strong><p>Se estiver usando o servidor Oracle 24h, a URL aparecerá preenchida automaticamente. Informe a senha de acesso. Para usar o Actions temporário, cole a URL do túnel.</p></div></div>
       </div>
       <form id="sessionForm" class="session-form">
-        <label for="tunnel">URL da sessão Cloudflare (temporária)</label>
-        <input id="tunnel" name="tunnel" type="url" inputmode="url" placeholder="https://exemplo.trycloudflare.com" autocomplete="off" required>
+        <label for="tunnel">URL do servidor HTTPS (VPS estável ou túnel temporário)</label>
+        <input id="tunnel" name="tunnel" type="url" inputmode="url" placeholder="https://meu-servidor.sslip.io" autocomplete="off" required>
         <label for="sessionKey">Senha da sessão (GitHub Secret)</label>
         <input id="sessionKey" name="sessionKey" type="password" placeholder="BOB_SESSION_KEY" autocomplete="off" minlength="20" required>
         <button type="submit" class="primary">Conectar IA + Voz + TikTok</button>

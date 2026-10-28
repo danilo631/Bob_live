@@ -6,7 +6,11 @@ const http = require("node:http");
 const crypto = require("node:crypto");
 const { WebSocket, WebSocketServer } = require("../.generated/server/node_modules/ws");
 
-const ORIGIN = "https://danilo631.github.io";
+const ORIGIN = process.env.BOB_PUBLIC_ORIGIN || "https://danilo631.github.io";
+// Only use one explicit HTTPS origin; never allow '*' or arbitrary caller origins.
+if (!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(ORIGIN)) {
+  throw new Error("BOB_PUBLIC_ORIGIN precisa ser uma origem HTTPS sem caminho");
+}
 const SECRET = process.env.BOB_SESSION_KEY || "";
 const PUBLIC_PORT = Number(process.env.PUBLIC_PORT || "9494");
 const BACKEND_PORT = Number(process.env.PORT || "9393");

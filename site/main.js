@@ -60,12 +60,19 @@
       gift.disabled = true;
     }
   }
+  // Em VPS, o servidor e o site compartilham a mesma origem.
+  if (location.protocol === "https:" && location.hostname !== "danilo631.github.io") {
+    $("#tunnel").value = location.origin + "/";
+  }
   $("#sessionForm").addEventListener("submit", async ev => {
     ev.preventDefault();
     try {
       const u = new URL($("#tunnel").value.trim());
-      if (u.protocol !== "https:" || !/^[a-z0-9-]+\.trycloudflare\.com$/i.test(u.hostname) || u.port || u.pathname !== "/" || u.search || u.hash) {
-        throw new Error("Use a URL completa HTTPS fornecida pelo Action (domínio trycloudflare.com).");
+      const isQuickTunnel = /^[a-z0-9-]+\.trycloudflare\.com$/i.test(u.hostname);
+      const isOwnServer = u.origin === window.location.origin;
+      if (u.protocol !== "https:" || (!isQuickTunnel && !isOwnServer) ||
+          u.port || u.pathname !== "/" || u.search || u.hash) {
+        throw new Error("Use a URL HTTPS do Action ou o endereço HTTPS desta própria página.");
       }
       const key = $("#sessionKey").value;
       if (key.length < 20 || key.length > 256) throw new Error("A senha deve ter de 20 a 256 caracteres.");

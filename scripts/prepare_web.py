@@ -89,10 +89,10 @@ def prepare():
     replace_once(
         bridge,
         "const verifyClient = ({ origin }) => !origin || /^https?:\\/\\/(127\\.0\\.0\\.1|localhost)(:\\d+)?$/.test(origin);",
-        "const verifyClient = ({ origin }) => !origin || /^https?:\\/\\/(127\\.0\\.0\\.1|localhost)(:\\d+)?$/.test(origin) || origin === 'https://danilo631.github.io';",
+        "const verifyClient = ({ origin }) => !origin || /^https?:\\/\\/(127\\.0\\.0\\.1|localhost)(:\\d+)?$/.test(origin) || origin === (process.env.BOB_PUBLIC_ORIGIN || 'https://danilo631.github.io');",
     )
     replace_once(bridge, "wss.on('connection', (ws) => {",
-                 "wss.on('connection', (ws, req) => {\n      this.webClient = req.headers.origin === 'https://danilo631.github.io';")
+                 "wss.on('connection', (ws, req) => {\n      this.webClient = req.headers.origin === (process.env.BOB_PUBLIC_ORIGIN || 'https://danilo631.github.io');")
     replace_once(bridge, "if (this.socket === ws) this.socket = null;",
                  "if (this.socket === ws) { this.socket = null; this.webClient = false; }")
     replace_once(
