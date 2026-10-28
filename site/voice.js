@@ -7,7 +7,16 @@
   const MODEL="onnx-community/Kokoro-82M-v1.0-ONNX";
   const modUrl="https://esm.sh/kokoro-js@1.2.1?bundle";
   const supported=["system","neural"];
-  let mode="system", modelPromise=null, audioContext=null, activeSource=null, speech=null;
+  let mode="system", modelPromise=null, audioContext=null, activeSource=null, activeAudio=null, speech=null;
+  let voicePack=null;
+  // Audios reais pre-renderizados pelo Piper (no Actions): HTMLAudio reproduz som
+  // diretamente na fonte Web, sem speechSynthesis ou processamento servidor.
+  if(typeof fetch==="function"){
+    void fetch("./voices/manifest.json",{cache:"force-cache"})
+      .then(res=>res.ok?res.json():null)
+      .then(data=>{if(data?.answers&&typeof data.answers==="object")voicePack=data;})
+      .catch(()=>{});
+  }
   let token=0;
   let state="Voz cartoon do navegador pronta";
   function message(msg) {
@@ -18,6 +27,7 @@
   function cancel() {
     ++token;
     if(activeSource){try{activeSource.stop()}catch{};activeSource.disconnect();activeSource=null;}
+    if(activeAudio){try{activeAudio.pause();activeAudio.currentTime=0;}catch{};activeAudio=null;}
     if("speechSynthesis" in window){window.speechSynthesis.cancel();}
     speech=null;
   }
@@ -126,8 +136,32 @@
     };
     const phrase=String(text||"").replace(/\s+/g," ").trim().slice(0,400);
     if(!phrase){done();return;}
-    if(mode==="neural")void speakNeural(phrase,done,myToken);
-    else speakSystem(phrase,done);
+    const file=voicePack?.answers?.[phrase];
+    const fallback=()=>{if(token!==myToken)return;
+      if(mode==="neural")void speakNeural(phrase,done,myToken);
+      else speakSystem(phrase,done);
+    };
+    // Preferir audio Piper para frases do catalogo: funciona melhor em fontes Web
+    // que capturam HTMLAudio e nao a engine de voz do sistema.
+    if(typeof Audio==="function"&&typeof file==="string"&&/^[a-f0-9]{24}\.ogg$/.test(file)){
+      try {
+        const a=new Audio("./voices/"+file);
+        activeAudio=a;
+        a.volume=1;
+        a.preload="auto";
+        a.onended=done;
+        a.onerror=()=>{if(activeAudio===a){activeAudio=null;fallback();}};
+        const p=a.play();
+        if(p&&typeof p.catch==="function")void p.catch(()=>{
+          if(activeAudio===a){activeAudio=null;
+            message("Navegador bloqueou som da fonte Web. Ative o audio no TikTok LIVE Studio.");
+            fallback();
+          }
+        });
+        return;
+      } catch{/* fallback */}
+    }
+    fallback();
   }
   window.BobVoice={setMode,activate,speak,cancel,getState:()=>({mode,status:state})};
 })();
