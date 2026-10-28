@@ -1,5 +1,35 @@
 (() => {
   "use strict";
+
+  // Voz brasileira local do navegador: Render recebe apenas texto, sem rodar TTS/IA na RAM.
+  const doneJobs = [];
+  let currentUtterance = null;
+  window.bobLivePopFinished = () => doneJobs.shift() || "";
+  window.bobLiveSpeak = (job) => {
+    const id = String(job?.job_id || "").slice(0, 100);
+    const text = String(job?.text || "").slice(0, 400);
+    if (!id || !text || !window.speechSynthesis) {
+      doneJobs.push(id);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = 1.08;
+    utterance.pitch = 1.25;
+    utterance.volume = 1;
+    const voices = speechSynthesis.getVoices();
+    utterance.voice = voices.find(v => v.lang.toLowerCase().replace("_", "-") === "pt-br") || null;
+    utterance.onend = () => { currentUtterance = null; doneJobs.push(id); };
+    utterance.onerror = () => { currentUtterance = null; doneJobs.push(id); };
+    try {
+      speechSynthesis.cancel();
+      currentUtterance = utterance;
+      speechSynthesis.speak(utterance);
+    } catch {
+      currentUtterance = null;
+      doneJobs.push(id);
+    }
+  };
   const $ = sel => document.querySelector(sel);
   const game = $("#game");
   const video = $("#video");
@@ -21,6 +51,17 @@
     state.textContent = "Carregando Godot…";
   };
   $("#start").addEventListener("click", startGame);
+  const audio = $("#audio");
+  if (audio) audio.addEventListener("click", () => {
+    if (!("speechSynthesis" in window)) { setInfo("Este navegador não suporta voz Web Speech."); return; }
+    const u = new SpeechSynthesisUtterance("Voz do Bob ativada!");
+    u.lang = "pt-BR";
+    u.rate = 1.05;
+    u.pitch = 1.25;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+    setInfo("Voz brasileira do navegador habilitada. Deixe a aba aberta para os comentários.");
+  });
   game.addEventListener("load", () => {
     state.textContent = "Jogo aberto · clique nele para ativar áudio";
   });
@@ -64,15 +105,19 @@
   if (location.protocol === "https:" && location.hostname !== "danilo631.github.io") {
     $("#tunnel").value = location.origin + "/";
   }
+  if (location.hostname === "bob-live-web-nexttec.onrender.com") {
+    $("#tunnel").value = "https://bob-live-api-nexttec.onrender.com/";
+  }
   $("#sessionForm").addEventListener("submit", async ev => {
     ev.preventDefault();
     try {
       const u = new URL($("#tunnel").value.trim());
       const isQuickTunnel = /^[a-z0-9-]+\.trycloudflare\.com$/i.test(u.hostname);
       const isOwnServer = u.origin === window.location.origin;
-      if (u.protocol !== "https:" || (!isQuickTunnel && !isOwnServer) ||
+      const isRenderBackend = u.origin === "https://bob-live-api-nexttec.onrender.com";
+      if (u.protocol !== "https:" || (!isQuickTunnel && !isOwnServer && !isRenderBackend) ||
           u.port || u.pathname !== "/" || u.search || u.hash) {
-        throw new Error("Use a URL HTTPS do Action ou o endereço HTTPS desta própria página.");
+        throw new Error("Use o servidor Render oficial, o endereço desta página ou o túnel HTTPS do Action.");
       }
       const key = $("#sessionKey").value;
       if (key.length < 20 || key.length > 256) throw new Error("A senha deve ter de 20 a 256 caracteres.");
