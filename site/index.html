@@ -12,7 +12,7 @@
 <body>
   <header class="top">
     <a class="mark" href="./" aria-label="Bob Live, início"><span class="mark-icon">BL</span><span>BOB<span class="accent">LIVE</span><small>ESTÚDIO WEB</small></span></a>
-    <div class="live-label"><span class="dot"></span> JOGO NA WEB · IA NO GITHUB ACTIONS</div>
+    <div class="live-label"><span class="dot"></span> GODOT NO NAVEGADOR · SERVER NO RENDER</div>
     <a class="top-link" href="https://github.com/danilo631/Bob_live" target="_blank" rel="noopener noreferrer">Código no GitHub ↗</a>
   </header>
   <main class="layout">
@@ -22,7 +22,7 @@
         <div id="placeholder" class="placeholder">
           <div class="glow"><span class="face" aria-hidden="true">▣</span></div>
           <h1>Seu personagem.<br><em>Sua live.</em></h1>
-          <p>Personagem 3D no navegador, IA e voz processadas no GitHub Actions. Capture esta aba para a live.</p>
+          <p>Personagem 3D na web; TikTok e IA via Render/OpenRouter, com voz brasileira produzida no navegador.</p>
           <button id="start" class="primary" type="button">Abrir personagem 3D <span>↗</span></button>
           <p class="micro">Clique no jogo depois de abrir para permitir o áudio do navegador.</p>
         </div>
@@ -35,19 +35,20 @@
       </div>
     </section>
     <aside class="controls">
-      <span class="eyebrow">SESSÃO REMOTA NO GITHUB</span>
+      <span class="eyebrow">ESTÚDIO WEB · RENDER + GITHUB</span>
       <h2>Seu Bob <span>na nuvem.</span></h2>
-      <p>O GitHub Actions executa TikTok + IA Qwen + voz brasileira Piper. Esta página recebe os eventos e o áudio através de uma conexão HTTPS temporária.</p>
+      <p>O Render hospeda a conexão com TikTok; a IA usa API compatível e a voz vem do seu navegador. GitHub Actions compila o jogo Godot.</p>
       <div class="steps">
-        <div class="step"><span class="number">01</span><div><strong>Ative a sessão na nuvem</strong><p>Abra o GitHub Actions e execute <b>Bob Live - IA e voz locais</b> no modo <b>web-live</b>. Use o usuário <b>nexttec_1</b> e modelo <b>qwen2.5:0.5b</b>.</p><a class="underlink" href="https://github.com/danilo631/Bob_live/actions/workflows/bob-live.yml" target="_blank" rel="noopener noreferrer">Abrir workflow de live ↗</a></div></div>
-        <div class="step"><span class="number">02</span><div><strong>Conecte com segurança</strong><p>Se estiver usando o servidor Oracle 24h, a URL aparecerá preenchida automaticamente. Informe a senha de acesso. Para usar o Actions temporário, cole a URL do túnel.</p></div></div>
+        <div class="step"><span class="number">01</span><div><strong>Ative a sessão na nuvem</strong><p>Use o servidor do Render. Para uma demonstração sem API de IA, o bot responde com frases de reserva. A qualidade melhora ao adicionar uma chave do OpenRouter nos Secrets do serviço.</p><a class="underlink" href="https://github.com/danilo631/Bob_live/actions/workflows/bob-live.yml" target="_blank" rel="noopener noreferrer">Ver builds no GitHub ↗</a></div></div>
+        <div class="step"><span class="number">02</span><div><strong>Conecte com segurança</strong><p>A página preencherá o endereço Render quando implantada. Informe a senha configurada no serviço Render (BOB_SESSION_KEY).</p></div></div>
       </div>
       <form id="sessionForm" class="session-form">
-        <label for="tunnel">URL do servidor HTTPS (VPS estável ou túnel temporário)</label>
+        <label for="tunnel">URL do servidor Render HTTPS</label>
         <input id="tunnel" name="tunnel" type="url" inputmode="url" placeholder="https://meu-servidor.sslip.io" autocomplete="off" required>
-        <label for="sessionKey">Senha da sessão (GitHub Secret)</label>
+        <label for="sessionKey">Senha da sessão (Render BOB_SESSION_KEY)</label>
         <input id="sessionKey" name="sessionKey" type="password" placeholder="BOB_SESSION_KEY" autocomplete="off" minlength="20" required>
         <button type="submit" class="primary">Conectar IA + Voz + TikTok</button>
+        <button id="audio" type="button">Ativar voz brasileira do navegador</button>
         <p id="serverStatus" role="status">Sessão não conectada. O personagem 3D pode ser aberto sem IA.</p>
         <div class="tests">
           <button type="button" id="simulate" disabled>Testar comentário</button>
@@ -56,13 +57,13 @@
       </form>
       <div class="step"><span class="number">03</span><div><strong>Transmita a janela do navegador</strong><p>Abra o personagem 3D acima, habilite áudio com um clique e capture a janela no OBS ou TikTok LIVE Studio. Nada de Ollama ou Node instalado no seu PC.</p></div></div>
       <div class="connection">
-        <span class="pill">TIKTOK</span><strong>@nexttec_1</strong><small>Eventos públicos do TikTok recebidos no Action; transmissão de vídeo continua no seu PC</small>
+        <span class="pill">TIKTOK</span><strong>@nexttec_1</strong><small>Conexão TikTok feita pelo Render; a transmissão de vídeo precisa de OBS ou LIVE Studio no PC</small>
       </div>
       <div class="actions">
-        <a href="https://github.com/danilo631/Bob_live/settings/secrets/actions" target="_blank" rel="noopener noreferrer">Configurar senha no GitHub ↗</a>
+        <a href="https://dashboard.render.com/" target="_blank" rel="noopener noreferrer">Configurar senha no Render ↗</a>
         <a href="https://github.com/danilo631/Bob_live/actions" target="_blank" rel="noopener noreferrer">Builds do Actions ↗</a>
       </div>
-      <div class="warning"><b>Limite gratuito:</b> o runner do Actions é temporário (máximo de 6 horas por job). O túnel gratuito muda de endereço a cada sessão e não garante estabilidade. O TikTok pode recusar o IP do runner. A voz Piper é cartoonizada, não uma clonagem da voz original do Bob.</div>
+      <div class="warning"><b>Limites gratuitos:</b> o backend Render Free suspende após períodos sem tráfego, não garantindo atividade ininterrupta. A voz é a voz pt-BR do navegador (não é a voz original do Bob); o conector TikTok não oficial pode falhar. Para 24h garantidas, precisa de hospedagem sem suspensão.</div>
     </aside>
   </main>
   <footer>Projeto original: <a href="https://github.com/LSzerodev/bob-live">Luis Felipe / LSzerodev</a> · <a href="https://t.me/+dodaVsUWVoQ0Yjhh">Comunidade do autor</a> · Personagem e assets com direitos de terceiros; veja <a href="https://github.com/danilo631/Bob_live/blob/main/upstream/NOTICE.md">créditos e licenças</a>.</footer>
