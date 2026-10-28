@@ -79,7 +79,7 @@ def prepare():
         else:
             url = "wss://no-session.invalid/ws/godot"
     if url != "":
-        bridge.url = url'''.replace("    ", "\\t"),
+        bridge.url = url'''.replace("    ", "\t"),
     )
 
     bridge = server / "src/bridge.js"
