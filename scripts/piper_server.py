@@ -47,6 +47,20 @@ def handler_factory(voice):
                     with wave.open(output, "wb") as wav:
                         voice.synthesize_wav(phrase, wav)
                 result = output.getvalue()
+                # Eleva levemente pitch/velocidade da voz original pt-BR, sem clonar terceiros.
+                import os
+                import struct
+                pitch = float(os.environ.get("PIPER_CARTOON_PITCH", "1.12"))
+                pitch = max(1.0, min(1.3, pitch))
+                if pitch != 1.0 and result[:4] == b"RIFF":
+                    out = bytearray(result)
+                    if out[12:16] == b"fmt " and len(out) >= 36:
+                        old_rate = struct.unpack_from("<I", out, 24)[0]
+                        frame_size = struct.unpack_from("<H", out, 32)[0]
+                        new_rate = int(old_rate * pitch)
+                        struct.pack_into("<I", out, 24, new_rate)
+                        struct.pack_into("<I", out, 28, new_rate * frame_size)
+                        result = bytes(out)
                 if not result.startswith(b"RIFF") or len(result) <= 100:
                     raise ValueError("invalid WAV output")
                 self.reply(200, result, "audio/wav")
