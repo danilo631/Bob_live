@@ -4,6 +4,7 @@ on:
     paths:
       - 'deploy/oracle/**'
       - 'scripts/prepare_web.py'
+      - 'scripts/test_web_adapter.py'
       - 'scripts/public_bridge.js'
       - 'scripts/test_public_bridge.js'
       - 'site/main.js'
