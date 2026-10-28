@@ -1,0 +1,114 @@
+name: Publicar Bob Live Web (Godot)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-web.yml"
+      - "upstream"
+      - ".gitmodules"
+      - "scripts/prepare_web.py"
+      - "site/**"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bob-live-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Validar e exportar Godot WebGL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Baixar submodulo original
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: upstream/server/package-lock.json
+
+      - name: Rodar testes do servidor original
+        run: |
+          npm ci --prefix upstream/server
+          npm test --prefix upstream/server
+          node --check site/main.js
+
+      - name: Preparar modificacoes Godot Web e Node
+        run: |
+          python3 scripts/prepare_web.py
+          node --check .generated/server/src/bridge.js
+          python3 scripts/test_web_adapter.py
+
+      - name: Baixar Godot 4.7.2 e templates Web
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable"
+          curl -fL --retry 3 "$base/Godot_v4.7.2-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.7.2-stable_linux.x86_64
+          sudo mv /tmp/Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          curl -fL --retry 3 "$base/Godot_v4.7.2-stable_export_templates.tpz" -o /tmp/godot-templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          unzip -q -j /tmp/godot-templates.tpz 'templates/web*.zip' -d "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          godot --headless --version
+
+      - name: Importar assets e exportar projeto Web
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/game
+          godot --headless --path .generated/game --import
+          godot --headless --path .generated/game --export-release "Web" "$GITHUB_WORKSPACE/site/game/index.html"
+          test -s site/game/index.html
+          test -s site/game/index.wasm
+          test -s site/game/index.pck
+          echo "Export HTML5 criado:"
+          du -h site/game/* | tail -n 12
+
+      - name: Enviar artefato Web, mesmo sem Pages ativado
+        uses: actions/upload-artifact@v4
+        with:
+          name: bob-live-web
+          path: site/
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    name: Publicar no GitHub Pages
+    runs-on: ubuntu-24.04
+    needs: build
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Recuperar site validado
+        uses: actions/download-artifact@v4
+        with:
+          name: bob-live-web
+          path: site
+      - name: Empacotar site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
