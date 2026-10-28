@@ -1,34 +1,15 @@
 (() => {
   "use strict";
 
-  // Voz brasileira local do navegador: Render recebe apenas texto, sem rodar TTS/IA na RAM.
+  // TTS executa no navegador. Kokoro ONNX usa WASM; Web Speech e o fallback.
   const doneJobs = [];
-  let currentUtterance = null;
   window.bobLivePopFinished = () => doneJobs.shift() || "";
-  window.bobLiveSpeak = (job) => {
-    const id = String(job?.job_id || "").slice(0, 100);
-    const text = String(job?.text || "").slice(0, 400);
-    if (!id || !text || !window.speechSynthesis) {
-      doneJobs.push(id);
-      return;
-    }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pt-BR";
-    utterance.rate = 1.08;
-    utterance.pitch = 1.25;
-    utterance.volume = 1;
-    const voices = speechSynthesis.getVoices();
-    utterance.voice = voices.find(v => v.lang.toLowerCase().replace("_", "-") === "pt-br") || null;
-    utterance.onend = () => { currentUtterance = null; doneJobs.push(id); };
-    utterance.onerror = () => { currentUtterance = null; doneJobs.push(id); };
-    try {
-      speechSynthesis.cancel();
-      currentUtterance = utterance;
-      speechSynthesis.speak(utterance);
-    } catch {
-      currentUtterance = null;
-      doneJobs.push(id);
-    }
+  window.bobLiveSpeak = job => {
+    const id = String(job?.job_id || "").slice(0,100);
+    const words = String(job?.text || "").slice(0,400);
+    if(!id)return;
+    if(!window.BobVoice){doneJobs.push(id);return;}
+    window.BobVoice.speak(words, () => doneJobs.push(id));
   };
   const $ = sel => document.querySelector(sel);
   const game = $("#game");
@@ -52,15 +33,21 @@
   };
   $("#start").addEventListener("click", startGame);
   const audio = $("#audio");
-  if (audio) audio.addEventListener("click", () => {
-    if (!("speechSynthesis" in window)) { setInfo("Este navegador não suporta voz Web Speech."); return; }
-    const u = new SpeechSynthesisUtterance("Voz do Bob ativada!");
-    u.lang = "pt-BR";
-    u.rate = 1.05;
-    u.pitch = 1.25;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-    setInfo("Voz brasileira do navegador habilitada. Deixe a aba aberta para os comentários.");
+  const modeSelect = $("#voiceMode");
+  if (modeSelect) modeSelect.addEventListener("change", () => {
+    window.BobVoice?.setMode(modeSelect.value);
+  });
+  if (audio) audio.addEventListener("click", async () => {
+    audio.disabled = true;
+    try {
+      if (!window.BobVoice) throw new Error("Motor de voz ainda não carregado");
+      await window.BobVoice.activate();
+      const voice = window.BobVoice.getState();
+      if (modeSelect) modeSelect.value = voice.mode;
+      setInfo(voice.status + " · capture áudio da aba no OBS.");
+    } catch(e) {
+      setInfo("Falha ao ativar voz: "+ e.message);
+    } finally {audio.disabled = false;}
   });
   game.addEventListener("load", () => {
     state.textContent = "Jogo aberto · clique nele para ativar áudio";
@@ -111,8 +98,7 @@
   if (location.protocol === "https:" && location.hostname !== "danilo631.github.io") {
     $("#tunnel").value = location.origin + "/";
   }
-  if (location.hostname === "bob-live-web-nexttec.onrender.com" ||
-      location.hostname === "bob-live-nexttec.vercel.app") {
+  if (location.hostname === "bob-live-web-nexttec.onrender.com") {
     $("#tunnel").value = "https://bob-live-api-nexttec.onrender.com/";
   }
   $("#sessionForm").addEventListener("submit", async ev => {
