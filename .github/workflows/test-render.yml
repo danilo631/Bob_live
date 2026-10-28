@@ -11,6 +11,9 @@ on:
       - "api/**"
       - "vercel.json"
       - "scripts/test_brain.js"
+      - "scripts/ollama_relay.js"
+      - "scripts/test_ollama_relay.js"
+      - ".github/workflows/ollama-relay.yml"
       - ".github/workflows/test-render.yml"
   workflow_dispatch:
 
@@ -41,6 +44,8 @@ jobs:
           node --check api/brain.js
           node --check brain/index.js
           node scripts/test_brain.js
+          node --check scripts/ollama_relay.js
+          node scripts/test_ollama_relay.js
       - name: Preparar Node sem motor de IA na memoria
         run: bash deploy/render/build-backend.sh
       - name: Testar modo browser TTS
@@ -49,6 +54,7 @@ jobs:
           grep -q "browser_tts: Boolean(c.browser_tts)" .generated/server/src/speech.js
           grep -q "TTS_PROVIDER === 'browser'" .generated/server/src/speech.js
           grep -q "neuralReply" .generated/server/src/ai.js
+          grep -q "activeOllamaRelay" .generated/server/src/ai.js
           test -f .generated/server/node_modules/ws/package.json
       - name: Importar patch de Web Speech ao Godot
         run: |
