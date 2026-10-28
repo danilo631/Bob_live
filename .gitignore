@@ -1,0 +1,5 @@
+deploy/.env
+.generated/
+site/game/
+__pycache__/
+*.pyc
