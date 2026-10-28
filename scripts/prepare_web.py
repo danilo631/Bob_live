@@ -82,6 +82,13 @@ def prepare():
         bridge.url = url'''.replace("    ", "\t"),
     )
 
+    backend_entry = server / "src/index.js"
+    replace_once(
+        backend_entry,
+        "server.listen(cfg.PORT, '127.0.0.1', () => {",
+        "server.listen(cfg.PORT, process.env.BOB_CONTAINER === '1' ? '0.0.0.0' : '127.0.0.1', () => {",
+    )
+
     bridge = server / "src/bridge.js"
     replace_once(bridge, "const EventEmitter = require('events');", "const EventEmitter = require('events');\nconst fs = require('fs');\nconst path = require('path');")
     replace_once(bridge, "this.socket = null;\n    this.lastByType = {};",

@@ -14,6 +14,7 @@ if (!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(ORIGIN)) {
 const SECRET = process.env.BOB_SESSION_KEY || "";
 const PUBLIC_PORT = Number(process.env.PUBLIC_PORT || "9494");
 const BACKEND_PORT = Number(process.env.PORT || "9393");
+const BACKEND_HOST = process.env.BOB_BACKEND_HOST || "127.0.0.1";
 if (SECRET.length < 20 || SECRET.length > 256) {
   console.error("Configure o secret BOB_SESSION_KEY com pelo menos 20 caracteres.");
   process.exit(1);
@@ -89,7 +90,7 @@ const server = http.createServer(async (req, res) => {
     });
   }
   const opts = {
-    hostname: "127.0.0.1", port: BACKEND_PORT, path: req.url, method: req.method,
+    hostname: BACKEND_HOST, port: BACKEND_PORT, path: req.url, method: req.method,
     headers: { Host: "127.0.0.1:" + BACKEND_PORT, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
     timeout: 6000,
   };
@@ -117,7 +118,7 @@ server.on("upgrade", (req, socket, head) => {
 wss.on("connection", client => {
   if (activeClient && activeClient.readyState === WebSocket.OPEN) activeClient.close(1000, "New session");
   activeClient = client;
-  const backend = new WebSocket("ws://127.0.0.1:" + BACKEND_PORT + "/ws/godot", {
+  const backend = new WebSocket("ws://" + BACKEND_HOST + ":" + BACKEND_PORT + "/ws/godot", {
     origin: ORIGIN, maxPayload: 4096,
   });
   const queued = [];

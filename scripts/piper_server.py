@@ -75,10 +75,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
     parser.add_argument("--port", type=int, default=8022)
+    parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
     model = Path(args.model).resolve()
     if not model.is_file() or not Path(str(model) + ".json").is_file():
         raise SystemExit("Missing .onnx or .onnx.json: %s" % model)
     voice = PiperVoice.load(str(model))
     print("[piper] pronto: %s" % model.name, flush=True)
-    ThreadingHTTPServer(("127.0.0.1", args.port), handler_factory(voice)).serve_forever()
+    ThreadingHTTPServer((args.host, args.port), handler_factory(voice)).serve_forever()
