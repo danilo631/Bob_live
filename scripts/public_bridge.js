@@ -125,7 +125,7 @@ const server = http.createServer(async (req, res) => {
   } catch {
     return respond(req, res, 400, { error: "invalid payload" });
   }
-  if (limit) {
+  if (limit && endpoint !== "POST /api/brain/ask") {
     let obj;
     try { obj = JSON.parse(body); } catch { return respond(req, res, 400, { error: "invalid json" }); }
     const trim = (v, max) => String(v || "").trim().slice(0, max);
