@@ -115,6 +115,9 @@ jobs:
           retention-days: 14
 
   deploy:
+    # Opcional: use somente quando o Pages estiver habilitado no repositorio.
+    # A instalacao Oracle ja hospeda site + API no mesmo servidor.
+    if: vars.ENABLE_GITHUB_PAGES == 'true'
     name: Publicar no GitHub Pages
     runs-on: ubuntu-24.04
     needs: build
