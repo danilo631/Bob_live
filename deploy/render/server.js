@@ -52,6 +52,32 @@ const children = jobs.map(job => {
   });
   return child;
 });
+// Uma unica verificacao no inicio comprova que Vercel atende o backend Render.
+// O token nunca e registrado; falha remota nunca derruba o fallback local.
+async function verifyVercelBrain() {
+  const endpoint=process.env.BRAIN_REMOTE_URL || "";
+  const key=process.env.BRAIN_API_KEY || "";
+  if(!/^https:\/\/[a-z0-9-]+\.vercel\.app\/api\/brain$/.test(endpoint)||key.length<20) {
+    console.log("IA: rede neural local pronta; offload Vercel nao configurado.");
+    return;
+  }
+  try {
+    const response=await fetch(endpoint,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-brain-key":key},
+      body:JSON.stringify({question:"qual seu nome?",nickname:"Teste"}),
+      signal:AbortSignal.timeout(7500)
+    });
+    if(!response.ok)throw new Error("HTTP "+response.status);
+    const result=await response.json();
+    if(!result.answer?.text || !result.answer.intent)throw new Error("sem resposta classificada");
+    console.log("IA distribuida: Vercel neural operacional, Render e fallback local prontos.");
+  } catch(err) {
+    console.warn("IA Vercel indisponivel ("+String(err.message).slice(0,110)+"); usando neural local no Render.");
+  }
+}
+void verifyVercelBrain();
+
 for (const signal of ["SIGTERM", "SIGINT"]) {
   process.on(signal, () => {
     stopping = true;
