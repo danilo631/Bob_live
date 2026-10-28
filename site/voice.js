@@ -35,9 +35,10 @@
         if(!TTS)throw new Error("Biblioteca Kokoro indisponível");
         const model=await TTS.from_pretrained(MODEL,{dtype:"q8",device:"wasm"});
         const voices=typeof model.list_voices==="function"?model.list_voices():{};
-        if(voices&&typeof voices==="object"&&!Object.keys(voices).some(k=>k==="pm_alex")){
-          throw new Error("Voz portuguesa pm_alex não disponível");
-        }
+        const names=Array.isArray(voices)?voices.map(v=>typeof v==="string"?v:v?.id):Object.keys(voices||{});
+        if(names.length&&!names.includes("pm_alex")&&!names.includes("pf_dora"))
+          throw new Error("Este build Kokoro não oferece vozes pt-BR");
+
         message("Kokoro neural pronto: voz pt-BR, estilo cartoon");
         return model;
       })().catch(err=>{modelPromise=null;throw err;});
@@ -99,9 +100,12 @@
       const source=audioContext.createBufferSource();
       source.buffer=buffer;
       source.playbackRate.value=1.12; // pitch mais agudo (sem usar voz original)
+      // Leve reforco de ressonancia vocal para um timbre expressivo/cartoon.
+      const nasal=audioContext.createBiquadFilter();
+      nasal.type="peaking";nasal.frequency.value=1050;nasal.Q.value=1.1;nasal.gain.value=3.2;
       const limiter=audioContext.createDynamicsCompressor();
       limiter.threshold.value=-13;limiter.ratio.value=2.5;
-      source.connect(limiter);limiter.connect(audioContext.destination);
+      source.connect(nasal);nasal.connect(limiter);limiter.connect(audioContext.destination);
       activeSource=source;
       source.onended=finish;
       source.start();
