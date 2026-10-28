@@ -1,0 +1,50 @@
+name: Validar backend Render leve
+on:
+  push:
+    paths:
+      - "deploy/render/**"
+      - "scripts/public_bridge.js"
+      - "scripts/test_public_bridge.js"
+      - "site/**"
+      - "render.yaml"
+      - ".github/workflows/test-render.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: upstream/server/package-lock.json
+      - name: Testar sintaxe e blueprint
+        run: |
+          bash -n deploy/render/build-backend.sh
+          bash -n deploy/render/build-frontend.sh
+          python3 -m py_compile deploy/render/patch_webspeech.py deploy/render/prepare_runtime.py
+          node --check site/main.js
+          node --check deploy/render/server.js
+      - name: Preparar Node sem motor de IA na memoria
+        run: bash deploy/render/build-backend.sh
+      - name: Testar modo browser TTS
+        run: |
+          node --check .generated/server/src/speech.js
+          grep -q "browser_tts: Boolean(c.browser_tts)" .generated/server/src/speech.js
+          grep -q "TTS_PROVIDER === 'browser'" .generated/server/src/speech.js
+          test -f .generated/server/node_modules/ws/package.json
+      - name: Importar patch de Web Speech ao Godot
+        run: |
+          python3 scripts/prepare_web.py
+          python3 scripts/test_web_adapter.py
+          grep -q "bobLiveSpeak" .generated/game/scripts/main.gd
+          grep -q "bobLivePopFinished" .generated/game/scripts/main.gd
