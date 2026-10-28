@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "scripts/build_voice_pack.py"
+      - "scripts/run_piper_batch.py"
       - ".github/workflows/voice-pack.yml"
       - "brain/intents.json"
   workflow_dispatch:
@@ -39,7 +40,7 @@ jobs:
           curl -fLsS --retry 4 "$MODEL/pt_BR-faber-medium.onnx" -o /tmp/pt_BR-faber-medium.onnx
           curl -fLsS --retry 4 "$MODEL/pt_BR-faber-medium.onnx.json" -o /tmp/pt_BR-faber-medium.onnx.json
           test "$(stat -c '%s' /tmp/pt_BR-faber-medium.onnx)" -gt 20000000
-          piper --model /tmp/pt_BR-faber-medium.onnx --json-input < build/voices/piper.ndjson
+          python3 scripts/run_piper_batch.py /tmp/pt_BR-faber-medium.onnx build/voices/piper.ndjson
       - name: Comprimir voz original cartoon em Ogg/Opus
         shell: bash
         run: |
