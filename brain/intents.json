@@ -448,7 +448,7 @@
       "id": "comida",
       "questions": [
         "qual sua comida favorita",
-        "você gosta de pizza",
+        "qual sua comida predileta",
         "gosta de bolo",
         "sabe cozinhar",
         "qual melhor comida"
@@ -464,7 +464,7 @@
       "questions": [
         "qual sua pizza favorita",
         "pizza de queijo",
-        "você quer pizza",
+        "gosta de pizza",
         "qual sabor de pizza",
         "gosta de calabresa"
       ],
@@ -496,7 +496,7 @@
         "você joga minecraft",
         "joga roblox",
         "qual videogame melhor",
-        "você gosta de games"
+        "você gosta de jogos"
       ],
       "answers": [
         "Jogos são ótimos para criar histórias com os amigos!",
@@ -689,7 +689,7 @@
       "questions": [
         "gosta de computador",
         "o que é inteligência artificial",
-        "você programa",
+        "sabe programar",
         "gosta de tecnologia",
         "sabe usar internet"
       ],
