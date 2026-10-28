@@ -22,9 +22,9 @@ Abra [GitHub Releases — web-latest](https://github.com/danilo631/Bob_live/rele
 
 O Render Static Site baixa apenas esse pacote — não baixa templates Godot de 1,3 GB nem executa Godot na build.
 
-## 2. Criar 2 serviços gratuitos no Render
+## 2. Serviços gratuitos no Render (já criados)
 
-Acesse [Render Dashboard](https://dashboard.render.com/). Para criar os dois serviços com os parâmetros já no repositório, escolha **New → Blueprint → GitHub → danilo631/Bob_live** e selecione **render.yaml**.
+**Os dois serviços já foram criados nesta conta:** [backend](https://dashboard.render.com/web/srv-dbh2iejl550s73c192h0) e [site estático](https://dashboard.render.com/static/srv-dbh2ic88v5cc73e7ne70), ambos ligados à branch `main`. Para refazer em outro workspace, importe `render.yaml` no Render Dashboard.
 
 Alternativamente, crie serviços manualmente:
 
@@ -49,9 +49,9 @@ Alternativamente, crie serviços manualmente:
 
 Se os nomes da URL renderizada forem alterados por colisões ou renomeação, ajuste `BOB_PUBLIC_ORIGIN` no backend e a URL permitida em `site/main.js`, então recompile e publique. A origem é restrita intencionalmente por segurança.
 
-### Onde configurar sua chave OpenRouter
+### IA sem chave e OpenRouter opcional
 
-Acesse https://openrouter.ai/settings/keys e crie uma chave. Cole-a apenas em **Render Web Service → Environment → OPENAI_API_KEY**. Os modelos gratuitos atuais e os limites estão em https://openrouter.ai/collections/free-models. O roteamento automático `openrouter/free` seleciona um modelo gratuito disponível, mas não garante resposta, limite, privacidade ou gratuidade sem restrições.
+A rede neural local responde aos assuntos conhecidos mesmo sem chave. Para perguntas abertas e respostas generativas, acesse https://openrouter.ai/settings/keys e crie uma chave. Cole-a apenas em **Render Web Service → Environment → OPENAI_API_KEY**. Os modelos gratuitos atuais e os limites estão em https://openrouter.ai/collections/free-models. O roteamento automático `openrouter/free` seleciona um modelo gratuito disponível, mas não garante resposta, limite, privacidade ou gratuidade sem restrições.
 
 ## 3. Usar o personagem na página
 
@@ -82,6 +82,6 @@ Para solicitar deploy do site somente depois do build, é possível cadastrar em
 
 - O GitHub Actions valida a segurança do proxy, prepara o Node e a voz no Godot, exporta HTML5/WASM e empacota o site na Release.
 - O pacote público pode ser implantado no Render como Static Site.
-- **Ainda precisa criar os serviços, salvar os dois segredos e confirmar runtime com o TikTok e navegador reais.** Sem isso, não há backend no ar nem garantia de live funcionando.
+- **Os serviços Render foram criados e o backend já informou nos logs que iniciou a rede neural local.** Ainda é necessário confirmar o áudio e as respostas em um navegador real e receber uma LIVE ativa no TikTok. Para a Vercel e o Ollama temporário, consulte [o guia das três plataformas](../vercel/README.md).
 - Gratuidade 24/7 e vídeo 24/7 garantidos não são possíveis usando somente Render Free + GitHub Actions.
 - Respeite as licenças originais em `upstream/LICENSE` e `upstream/NOTICE.md` e os termos do TikTok e do provedor de IA.
