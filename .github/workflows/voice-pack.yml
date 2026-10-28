@@ -1,0 +1,74 @@
+name: Gerar pacote de voz neural pt-BR (Piper)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_voice_pack.py"
+      - ".github/workflows/voice-pack.yml"
+      - "brain/intents.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bob-live-voice-pack
+  cancel-in-progress: false
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Preparar audios e verificar banco
+        run: |
+          python3 scripts/build_voice_pack.py
+          test "$(wc -l < build/voices/piper.ndjson)" -ge 120
+      - name: Instalar Piper oficial e modelo brasileiro
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "piper-tts==1.8.0"
+          MODEL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium"
+          curl -fLsS --retry 4 "$MODEL/pt_BR-faber-medium.onnx" -o /tmp/pt_BR-faber-medium.onnx
+          curl -fLsS --retry 4 "$MODEL/pt_BR-faber-medium.onnx.json" -o /tmp/pt_BR-faber-medium.onnx.json
+          test "$(stat -c '%s' /tmp/pt_BR-faber-medium.onnx)" -gt 20000000
+          piper --model /tmp/pt_BR-faber-medium.onnx --json-input < build/voices/piper.ndjson
+      - name: Comprimir voz original cartoon em Ogg/Opus
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' wav; do
+            ogg="${wav%.wav}.ogg"
+            ffmpeg -nostdin -hide_banner -loglevel error -y -i "$wav" \
+              -af "asetrate=26019,aresample=22050,atempo=0.85" \
+              -c:a libopus -b:a 32k "$ogg"
+            test -s "$ogg"
+            rm -f "$wav"
+            count=$((count+1))
+          done < <(find build/voices -type f -name '*.wav' -print0)
+          echo "Audios preparados: $count"
+          test "$count" -ge 120
+          test -s build/voices/manifest.json
+          (cd build && zip -q -r "$RUNNER_TEMP/bob-live-voices.zip" voices -x 'voices/piper.ndjson')
+          test -s "$RUNNER_TEMP/bob-live-voices.zip"
+      - name: Publicar voz gerada para site unico
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view voices-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create voices-latest --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "Bob Live - Voz pt-BR offline" \
+              --notes "Audio original sintetizado com Piper/Faber pt_BR em GitHub Actions. Sem usar voz de dublador real."
+          fi
+          gh release upload voices-latest "$RUNNER_TEMP/bob-live-voices.zip" --clobber --repo "$GITHUB_REPOSITORY"
+          echo "Pacote de voz pronto para Render Static, sem motor de voz no servidor."
