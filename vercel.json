@@ -1,26 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "bash deploy/render/build-frontend.sh",
-  "outputDirectory": "site",
   "functions": {
     "api/brain.js": {
       "maxDuration": 10
     }
   },
-  "headers": [
+  "redirects": [
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
+      "source": "/",
+      "destination": "https://bob-live-web-nexttec.onrender.com/",
+      "permanent": false
     }
   ]
 }
