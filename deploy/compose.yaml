@@ -1,0 +1,54 @@
+name: bob-live
+services:
+  web:
+    image: ghcr.io/danilo631/bob-live-web:latest
+    restart: unless-stopped
+    depends_on: [bridge]
+    ports: ["80:80", "443:443"]
+    environment:
+      BOB_DOMAIN: ${BOB_DOMAIN:?Configure BOB_DOMAIN}
+    volumes: [caddy_data:/data, caddy_config:/config]
+  bridge:
+    build: { context: .., dockerfile: deploy/Dockerfile.bridge }
+    restart: unless-stopped
+    depends_on: [server]
+    environment:
+      BOB_BACKEND_HOST: server
+      BOB_PUBLIC_ORIGIN: https://${BOB_DOMAIN:?Configure BOB_DOMAIN}
+      BOB_SESSION_KEY: ${BOB_SESSION_KEY:?Configure BOB_SESSION_KEY}
+      PORT: "9393"
+      PUBLIC_PORT: "9494"
+  server:
+    build: { context: .., dockerfile: deploy/Dockerfile.server }
+    restart: unless-stopped
+    depends_on: [ollama, piper]
+    environment:
+      BOB_CONTAINER: "1"
+      TIKTOK_USERNAME: ${TIKTOK_USERNAME:-nexttec_1}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      OLLAMA_NUM_CTX: "4096"
+      AI_PROVIDER: ollama
+      REPLY_LENGTH: curta
+      TTS_PROVIDER: custom
+      CUSTOM_TTS_URL: http://piper:8022/tts
+      CUSTOM_TTS_METHOD: POST
+      CUSTOM_TTS_FORMAT: audio
+      CUSTOM_TTS_BODY: '{"text":"{text}"}'
+      CUSTOM_TTS_HEADERS: "Content-Type: application/json"
+      VOICE_AUTOSTART: "0"
+    volumes: [server_private:/app/private, server_runs:/app/runs]
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes: [ollama_data:/root/.ollama]
+    environment: { OLLAMA_NUM_PARALLEL: "1", OLLAMA_MAX_LOADED_MODELS: "1" }
+  piper:
+    build: { context: .., dockerfile: deploy/Dockerfile.piper }
+    restart: unless-stopped
+volumes:
+  caddy_data:
+  caddy_config:
+  ollama_data:
+  server_private:
+  server_runs:

@@ -1,0 +1,9 @@
+{$BOB_DOMAIN} {
+  encode zstd gzip
+  @backend path /health /api/* /ws/godot
+  reverse_proxy @backend bridge:9494
+  root * /srv/site
+  file_server
+  header X-Content-Type-Options nosniff
+  header Referrer-Policy strict-origin-when-cross-origin
+}

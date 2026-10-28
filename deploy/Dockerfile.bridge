@@ -1,0 +1,7 @@
+FROM node:22-bookworm-slim
+WORKDIR /app
+COPY .generated/server/package*.json /app/.generated/server/
+RUN cd /app/.generated/server && npm ci --omit=dev
+COPY scripts/public_bridge.js /app/scripts/public_bridge.js
+ENV PORT=9393 PUBLIC_PORT=9494
+CMD ["node","scripts/public_bridge.js"]

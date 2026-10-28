@@ -1,0 +1,6 @@
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install --no-cache-dir piper-tts==1.7.0
+RUN mkdir /models && python -c 'import urllib.request as u; b="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/"; [u.urlretrieve(b+n,"/models/"+n) for n in ("pt_BR-faber-medium.onnx","pt_BR-faber-medium.onnx.json")]'
+COPY scripts/piper_server.py .
+CMD ["python","-u","piper_server.py","--model","/models/pt_BR-faber-medium.onnx","--host","0.0.0.0"]
