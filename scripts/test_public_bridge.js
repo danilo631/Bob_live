@@ -55,6 +55,21 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       Origin:"https://evil.example",Authorization:"Bearer "+secret
     },body:"{}"});
     assert.equal(brainOutside.status,403);
+    const linkResponse=await fetch(url+"/api/studio/link",{method:"POST",headers:{
+      Origin:origin,Authorization:"Bearer "+secret
+    }});
+    assert.equal(linkResponse.status,200);
+    const link=await linkResponse.json();
+    assert.match(link.url,/^https:\/\/[a-z0-9.-]+\/\?studio=1#key=[A-Za-z0-9_-]{43}$/);
+    assert.ok(!link.url.includes(secret),"Admin password leaked in source link");
+    const denyStudio=await fetch(url+"/api/studio/link",{method:"POST",headers:{
+      Origin:origin,Authorization:"Bearer invalid"
+    }});
+    assert.equal(denyStudio.status,401);
+    const denyOtherOrigin=await fetch(url+"/api/studio/link",{method:"POST",headers:{
+      Origin:"https://example.org",Authorization:"Bearer "+secret
+    }});
+    assert.equal(denyOtherOrigin.status,403);
     const brain = await fetch(url + "/api/brain/status", { headers: { Origin: origin, Authorization: "Bearer " + secret } });
     assert.equal(brain.status, 200);
     const engine=await brain.json();
