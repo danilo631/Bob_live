@@ -139,9 +139,9 @@ jobs:
 
   deploy:
     # Opcional: use somente quando o Pages estiver habilitado no repositorio.
-    # A instalacao Oracle ja hospeda site + API no mesmo servidor.
+    # Unico frontend no Render. Pages guarda somente JSON estatico de treinamento.
     if: vars.ENABLE_GITHUB_PAGES == 'true'
-    name: Publicar no GitHub Pages
+    name: Publicar base de conhecimento no GitHub Pages (sem segundo site)
     runs-on: ubuntu-24.04
     needs: build
     timeout-minutes: 15
@@ -157,15 +157,21 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
-      - name: Recuperar site validado
-        uses: actions/download-artifact@v4
+      - name: Recuperar apenas dados publicos do cerebro
+        uses: actions/checkout@v4
         with:
-          name: bob-live-web
-          path: site
-      - name: Empacotar site
+          persist-credentials: false
+      - name: Publicar dados, nunca uma segunda copia do jogo
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages-assets/brain
+          cp brain/intents.json pages-assets/brain/intents.json
+          printf '%s\n' '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://bob-live-web-nexttec.onrender.com/"><a href="https://bob-live-web-nexttec.onrender.com/">Abrir Bob Live</a>' > pages-assets/index.html
+      - name: Empacotar apenas JSON de conhecimento para GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: pages-assets
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
