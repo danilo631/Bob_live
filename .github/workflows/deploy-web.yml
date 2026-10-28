@@ -123,7 +123,6 @@ jobs:
           gh release upload web-latest "$RUNNER_TEMP/bob-live-web.zip" --clobber --repo "$GITHUB_REPOSITORY"
           echo "Release Web atualizado para hospedagem no Render."
       - name: Atualizar site Render após release (se hook configurado)
-        if: ${{ secrets.RENDER_STATIC_DEPLOY_HOOK != '' }}
         env:
           RENDER_STATIC_DEPLOY_HOOK: ${{ secrets.RENDER_STATIC_DEPLOY_HOOK }}
         run: |
