@@ -9,11 +9,13 @@ on:
       - ".gitmodules"
       - "scripts/prepare_web.py"
       - "site/**"
+      - "deploy/render/**"
+      - "render.yaml"
       - "README.md"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
@@ -106,6 +108,28 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/danilo631/bob-live-web:latest
 
+      - name: Publicar pacote Web estático para Render
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          (cd site && zip -qr "$RUNNER_TEMP/bob-live-web.zip" .)
+          if ! gh release view web-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create web-latest --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "Bob Live Web (build estável)" \
+              --notes "Export Godot WebGL e página pública. Distribuído com créditos ao projeto original."
+          fi
+          gh release upload web-latest "$RUNNER_TEMP/bob-live-web.zip" --clobber --repo "$GITHUB_REPOSITORY"
+          echo "Release Web atualizado para hospedagem no Render."
+      - name: Atualizar site Render após release (se hook configurado)
+        if: ${{ secrets.RENDER_STATIC_DEPLOY_HOOK != '' }}
+        env:
+          RENDER_STATIC_DEPLOY_HOOK: ${{ secrets.RENDER_STATIC_DEPLOY_HOOK }}
+        run: |
+          if [[ -n "$RENDER_STATIC_DEPLOY_HOOK" ]]; then
+            curl -fLsS --retry 2 --max-time 25 -X POST "$RENDER_STATIC_DEPLOY_HOOK"
+          fi
       - name: Enviar artefato Web, mesmo sem Pages ativado
         uses: actions/upload-artifact@v4
         with:
