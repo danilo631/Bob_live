@@ -12,6 +12,16 @@ test -s /tmp/bob-live-web-game/game/index.wasm
 test -s /tmp/bob-live-web-game/game/index.pck
 rm -rf site/game
 mv /tmp/bob-live-web-game/game site/game
+# Opcional: banco de falas pre-sintetizadas pelo Piper no GitHub Actions.
+# Os audios sao reproduzidos em <audio> na fonte Web, sem CPU de TTS no Render.
+VOICE_ASSET="https://github.com/danilo631/Bob_live/releases/download/voices-latest/bob-live-voices.zip"
+if curl -fLsS --retry 2 --max-time 30 "$VOICE_ASSET" -o /tmp/bob-live-voices.zip; then
+  unzip -oq /tmp/bob-live-voices.zip -d site
+  test -s site/voices/manifest.json
+  echo "Pacote de voz pt-BR carregado no site."
+else
+  echo "Pacote Piper ainda nao publicado; usando Web Speech e Kokoro."
+fi
 test -s site/index.html
 test -s site/main.js
 test -s site/voice.js
