@@ -6,6 +6,7 @@ const http = require("node:http");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const brain = require("../brain");
 const { WebSocket, WebSocketServer } = require("../.generated/server/node_modules/ws");
 
 const ORIGIN = process.env.BOB_PUBLIC_ORIGIN || "https://danilo631.github.io";
@@ -61,6 +62,7 @@ function respond(req, res, status, body) {
 }
 const allowed = new Map([
   ["GET /api/status", 0],
+  ["GET /api/brain/status", 0],
   ["POST /api/simulate/chat", 1200],
   ["POST /api/simulate/gift", 1200],
 ]);
@@ -100,6 +102,13 @@ const server = http.createServer(async (req, res) => {
   if (!allowed.has(endpoint)) return respond(req, res, 404, { error: "not found" });
   if (!authorized(String(req.headers.authorization || "").replace(/^Bearer /, ""))) {
     return respond(req, res, 401, { error: "unauthorized" });
+  }
+  if (endpoint === "GET /api/brain/status") {
+    let ollama=false;
+    try {const relay=JSON.parse(fs.readFileSync(RELAY_FILE,"utf8"));ollama=Number(relay.expires)>Date.now();} catch {}
+    return respond(req,res,200,{ok:true,engine:ollama?"ollama-actions":"neural-ptbr",
+      ollama,vercelOffload:Boolean(process.env.BRAIN_REMOTE_URL && process.env.BRAIN_API_KEY),
+      stats:brain.stats()});
   }
   const limit = allowed.get(endpoint);
   if (limit) {
