@@ -3,7 +3,7 @@
 ## O que roda em cada servico
 
 - **GitHub Actions** compila o Godot Web e publica `web-latest/bob-live-web.zip`. Pode rodar o Ollama `qwen2.5:0.5b` por tempo **limitado** sob demanda (5–120 minutos).
-- **Vercel** hospeda a mesma pagina Godot e oferece `/api/brain` (rede neural 256→24→49, CPU leve).
+- **Vercel** não hospeda outra página; executa exclusivamente `/api/brain` (rede neural 256→24→49, CPU leve).
 - **Render Free** mantem Node, TikTok Live Connector, ranking, WebSocket/controle e a rede neural local de reserva, sem Ollama instalado na memoria do Render.
 - **OpenRouter** (opcional, mediante chave pessoal) permite gerar respostas nao previstas na lista, mesmo com o runner de Ollama desligado.
 - **Web Speech API** gera voz pt-BR na maquina que abre o navegador. O servidor nao envia audio processado por Piper no modo leve.
@@ -14,16 +14,16 @@
 
 Conecte a app Vercel ao ChatGPT ou acesse https://vercel.com/new e importe `https://github.com/danilo631/Bob_live`.
 
-Nome do projeto: `bob-live-nexttec` (gerara o endereco previsto `https://bob-live-nexttec.vercel.app` caso esteja disponivel).
+Projeto existente: `bob-live-nexttec`, no workspace `danilo631s-projects`. A raiz Vercel redireciona ao site único do Render.
 
-A raiz contem [vercel.json](../../vercel.json), que utiliza o build `bash deploy/render/build-frontend.sh` para buscar o ZIP da Release e publica `site/`. A funcao `api/brain.js` usa `brain/index.js` com dados de `brain/intents.json`.
+A raiz contém [vercel.json](../../vercel.json), que configura apenas `api/brain.js` e redireciona `/` ao site Render. A funcao `api/brain.js` usa `brain/index.js` com dados de `brain/intents.json`.
 
 Em **Vercel → Project Settings → Environment Variables**, crie:
 - `BRAIN_API_KEY`: segredo privado aleatorio com **32+ caracteres** (igual no Render, para a comunicacao entre servidores).
 
 Depois configure no servico Render (https://dashboard.render.com/web/srv-dbh2iejl550s73c192h0) os mesmos valores:
 - `BRAIN_API_KEY=<o mesmo valor da Vercel>`
-- `BRAIN_REMOTE_URL=https://bob-live-nexttec.vercel.app/api/brain`
+- `BRAIN_REMOTE_URL=https://bob-live-nexttec-danilo631s-projects.vercel.app/api/brain`
 - `BOB_PUBLIC_ORIGINS=https://bob-live-web-nexttec.onrender.com,https://bob-live-nexttec.vercel.app`
 
 A rede neural funciona localmente no Render **sem** essas variaveis; a Vercel e o offload opcional por ate 1,8 segundo antes de retornar ao classificador local.
@@ -65,3 +65,7 @@ Ordem de operacao na resposta de comentarios:
 - O backend de teste: https://bob-live-api-nexttec.onrender.com/health
 
 **Limites:** GitHub Actions nao oferece um host 24h por job; Vercel Functions nao executam servicos permanentes; Render Free dorme sem trafego. A captura e publicacao de video para TikTok ainda dependem de um encoder/RTMP autorizado e ativo.
+
+## Voz neural no site unico
+
+A pagina Render agora carrega `site/voice.js`: o modo padrão usa Web Speech pt-BR, pitch/velocidade cartoon, e o modo experimental baixa Kokoro-82M via WASM no navegador. Ele não usa a CPU/RAM do Render ou Vercel e pode ser lento em telefones; cai para Web Speech. O timbre é próprio, não uma cópia da dublagem original de Bob Esponja. O serviço HeyGen pode ser usado para prototipar voz autorizada, mas não é um servidor TTS gratuito de streaming permanente.
