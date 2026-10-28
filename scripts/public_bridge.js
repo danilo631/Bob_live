@@ -13,7 +13,7 @@ if (!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(ORIGIN)) {
 }
 const SECRET = process.env.BOB_SESSION_KEY || "";
 const PUBLIC_PORT = Number(process.env.PUBLIC_PORT || "9494");
-const BACKEND_PORT = Number(process.env.PORT || "9393");
+const BACKEND_PORT = Number(process.env.BOB_BACKEND_PORT || process.env.PORT || "9393");
 const BACKEND_HOST = process.env.BOB_BACKEND_HOST || "127.0.0.1";
 if (SECRET.length < 20 || SECRET.length > 256) {
   console.error("Configure o secret BOB_SESSION_KEY com pelo menos 20 caracteres.");
@@ -150,4 +150,4 @@ wss.on("connection", client => {
   client.on("close", close);
   client.on("error", close);
 });
-server.listen(PUBLIC_PORT, "127.0.0.1", () => console.log("Bob public bridge ready (port " + PUBLIC_PORT + "; authenticated)"));
+server.listen(PUBLIC_PORT, process.env.BOB_PUBLIC_HOST || "127.0.0.1", () => console.log("Bob public bridge ready (port " + PUBLIC_PORT + "; authenticated)"));
