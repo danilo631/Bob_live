@@ -1,0 +1,43 @@
+name: Validar instalador Oracle 24h
+on:
+  push:
+    paths:
+      - 'deploy/oracle/**'
+      - 'scripts/prepare_web.py'
+      - 'scripts/public_bridge.js'
+      - 'scripts/test_public_bridge.js'
+      - 'site/main.js'
+      - '.github/workflows/test-oracle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: upstream/server/package-lock.json
+      - name: Syntax do instalador shell
+        run: |
+          bash -n deploy/oracle/install.sh
+          grep -q 'Restart=always' deploy/oracle/install.sh
+          grep -q 'BOB_PUBLIC_ORIGIN' deploy/oracle/install.sh
+      - name: Testes de compatibilidade
+        run: |
+          python3 -m py_compile scripts/prepare_web.py
+          python3 scripts/prepare_web.py
+          python3 scripts/test_web_adapter.py
+          npm ci --prefix .generated/server --no-audit --no-fund
+          node --check scripts/public_bridge.js
+          node --check site/main.js
+          node scripts/test_public_bridge.js
