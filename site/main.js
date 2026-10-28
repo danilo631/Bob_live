@@ -91,8 +91,14 @@
     if (!base) return;
     try {
       const s = await api("/api/status");
+      const brain = await api("/api/brain/status").catch(() => null);
       const online = !!s.tiktok?.listening;
-      setInfo("IA: " + (s.ia?.model || "sem modelo") + " · TikTok: " + (online ? "conectado" : "aguardando live") + " · Jogo: " + (s.godot ? "conectado" : "sem janela"));
+      const model = brain?.ollama ? "Ollama Qwen 0.5B (Actions)" :
+        brain?.stats ? "rede neural local (" + brain.stats.trainingExamples + " perguntas)" :
+        (s.ia?.model || "desconhecido");
+      setInfo("IA: " + model + (brain?.vercelOffload ? " + Vercel" : "") +
+        " · TikTok: " + (online ? "conectado" : "aguardando live") +
+        " · Jogo: " + (s.godot ? "conectado" : "sem janela"));
       simulate.disabled = false;
       gift.disabled = false;
     } catch (e) {
