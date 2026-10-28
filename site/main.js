@@ -105,7 +105,8 @@
   if (location.protocol === "https:" && location.hostname !== "danilo631.github.io") {
     $("#tunnel").value = location.origin + "/";
   }
-  if (location.hostname === "bob-live-web-nexttec.onrender.com") {
+  if (location.hostname === "bob-live-web-nexttec.onrender.com" ||
+      location.hostname === "bob-live-nexttec.vercel.app") {
     $("#tunnel").value = "https://bob-live-api-nexttec.onrender.com/";
   }
   $("#sessionForm").addEventListener("submit", async ev => {
