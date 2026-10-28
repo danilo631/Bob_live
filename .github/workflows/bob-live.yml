@@ -1,0 +1,181 @@
+name: Bob Live - IA e voz locais
+
+on:
+  push:
+    paths:
+      - ".github/workflows/bob-live.yml"
+      - ".gitmodules"
+      - "scripts/**"
+      - "README.md"
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "Execucao"
+        required: true
+        type: choice
+        default: teste-local
+        options: [validacao, teste-local, monitorar-live]
+      usuario:
+        description: "Usuario TikTok sem @"
+        required: true
+        type: string
+        default: nexttec_1
+      modelo:
+        description: "Modelo local (CPU)"
+        required: true
+        type: choice
+        default: qwen2.5:1.5b
+        options: ["qwen2.5:1.5b", "qwen2.5:0.5b"]
+      duracao_minutos:
+        description: "Monitorar por 1 a 330 minutos"
+        required: true
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bob-live-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    name: Testes de codigo do servidor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: upstream/server/package-lock.json
+      - run: test -f upstream/server/package-lock.json && test -f upstream/LICENSE
+      - run: npm ci --prefix upstream/server
+      - run: npm test --prefix upstream/server
+      - run: python3 -m py_compile scripts/piper_server.py
+
+  executar:
+    name: Ollama + Piper + eventos do TikTok
+    if: github.event_name == 'workflow_dispatch' && inputs.modo != 'validacao'
+    needs: validar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      TIKTOK_USERNAME: ${{ inputs.usuario }}
+      OLLAMA_MODEL: ${{ inputs.modelo }}
+      DURATION: ${{ inputs.duracao_minutos }}
+      OLLAMA_URL: http://127.0.0.1:11434
+      OLLAMA_NUM_CTX: "8192"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      AI_PROVIDER: ollama
+      AI_TEMPERATURE: "0.65"
+      REPLY_LENGTH: curta
+      TTS_PROVIDER: custom
+      CUSTOM_TTS_URL: http://127.0.0.1:8022/tts
+      CUSTOM_TTS_METHOD: POST
+      CUSTOM_TTS_FORMAT: audio
+      CUSTOM_TTS_BODY: '{"text":"{text}"}'
+      CUSTOM_TTS_HEADERS: "Content-Type: application/json"
+      PORT: "9393"
+    steps:
+      - name: Baixar codigo original e submodulo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: upstream/server/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validar entradas
+        shell: bash
+        run: |
+          [[ "$TIKTOK_USERNAME" =~ ^[A-Za-z0-9_.]{2,24}$ ]] || { echo "::error::Usuario TikTok invalido"; exit 1; }
+          [[ "$DURATION" =~ ^[0-9]+$ ]] && (( DURATION >= 1 && DURATION <= 330 )) || { echo "::error::Duracao invalida"; exit 1; }
+          echo "Conta: @$TIKTOK_USERNAME | Modelo local: $OLLAMA_MODEL"
+      - name: Instalar servidor Node
+        run: npm ci --prefix upstream/server
+      - name: Preparar Ollama no runner
+        shell: bash
+        run: |
+          curl -fsSL --retry 3 https://ollama.com/install.sh -o /tmp/install-ollama.sh
+          sh /tmp/install-ollama.sh
+          nohup ollama serve >/tmp/bob-ollama.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:11434/api/tags >/dev/null
+          ollama pull "$OLLAMA_MODEL"
+      - name: Preparar voz local Piper pt-BR
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check "piper-tts==1.7.0"
+          mkdir -p models
+          base="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium"
+          curl -fL --retry 3 "$base/pt_BR-faber-medium.onnx" -o models/pt_BR-faber-medium.onnx
+          curl -fL --retry 3 "$base/pt_BR-faber-medium.onnx.json" -o models/pt_BR-faber-medium.onnx.json
+          echo "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7  models/pt_BR-faber-medium.onnx" | sha256sum -c -
+          nohup python -u scripts/piper_server.py --model models/pt_BR-faber-medium.onnx >/tmp/bob-piper.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8022/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8022/health
+      - name: Testar IA e voz local
+        shell: bash
+        run: |
+          curl -fsS --max-time 180 http://127.0.0.1:11434/api/generate \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"$OLLAMA_MODEL\",\"prompt\":\"Diga oi em portugues do Brasil.\",\"stream\":false,\"options\":{\"num_predict\":20,\"num_ctx\":4096}}" >/tmp/bob-ai-teste.json
+          python -c 'import json; a=json.load(open("/tmp/bob-ai-teste.json")); assert a.get("response"); print("Ollama OK:",a["response"][:100])'
+          curl -fsS --max-time 120 http://127.0.0.1:8022/tts -H "Content-Type: application/json" \
+            -d '{"text":"Oi, pessoal! Bem-vindos a live."}' -o /tmp/bob-voz-teste.wav
+          python -c 'import wave; w=wave.open("/tmp/bob-voz-teste.wav", "rb"); assert w.getnframes() > 1000; print("Piper OK:",w.getnframes(),"frames")'
+      - name: Testar servidor e painel privado
+        if: inputs.modo == 'teste-local'
+        shell: bash
+        env:
+          TIKTOK_USERNAME: ""
+        run: |
+          cd upstream/server
+          node src/index.js >/tmp/bob-server.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:9393/api/status >/tmp/bob-status.json; then break; fi
+            sleep 1
+          done
+          python -c 'import json; x=json.load(open("/tmp/bob-status.json")); assert x["ia"]["provider"]=="Ollama"; print("Painel e servidor OK")'
+      - name: Monitorar eventos da live sem transmitir video
+        if: inputs.modo == 'monitorar-live'
+        shell: bash
+        run: |
+          cd upstream/server
+          echo "Monitorando live publica @$TIKTOK_USERNAME ..."
+          set +e
+          timeout --signal=INT --kill-after=15s "$DURATION"m node src/index.js
+          code=$?
+          set -e
+          if [[ "$code" != 0 && "$code" != 124 && "$code" != 130 ]]; then
+            echo "::error::Servidor encerrou inesperadamente: $code"
+            exit "$code"
+          fi
+          echo "Monitoramento encerrado. Nao houve transmissao de video."
+      - name: Diagnostico se falhar
+        if: failure()
+        shell: bash
+        run: |
+          for f in /tmp/bob-ollama.log /tmp/bob-piper.log /tmp/bob-server.log; do
+            if test -f "$f"; then echo "=== $f ==="; tail -n 40 "$f"; fi
+          done
