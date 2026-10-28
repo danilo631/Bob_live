@@ -4,6 +4,8 @@
 // The full 9393 control panel, credentials, settings, and admin endpoints remain on localhost.
 const http = require("node:http");
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
 const { WebSocket, WebSocketServer } = require("../.generated/server/node_modules/ws");
 
 const ORIGIN = process.env.BOB_PUBLIC_ORIGIN || "https://danilo631.github.io";
@@ -21,6 +23,13 @@ for (const item of String(process.env.BOB_PUBLIC_ORIGINS || "").split(",")) {
 }
 const trustedOrigin = req => ORIGINS.has(req.headers.origin);
 const SECRET = process.env.BOB_SESSION_KEY || "";
+const RELAY_KEY = process.env.BOB_OLLAMA_RELAY_KEY || "";
+const RELAY_FILE = path.resolve(__dirname, "../.generated/server/private/ollama-relay.json");
+function authorizedRelay(candidate) {
+  if (RELAY_KEY.length < 32 || typeof candidate !== "string" || candidate.length !== RELAY_KEY.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(RELAY_KEY));
+}
+
 const PUBLIC_PORT = Number(process.env.PUBLIC_PORT || "9494");
 const BACKEND_PORT = Number(process.env.BOB_BACKEND_PORT || process.env.PORT || "9393");
 const BACKEND_HOST = process.env.BOB_BACKEND_HOST || "127.0.0.1";
@@ -57,6 +66,28 @@ const allowed = new Map([
 ]);
 let nextSimulationAt = 0;
 const server = http.createServer(async (req, res) => {
+  if (req.url === "/internal/ollama/attach" && req.method === "POST") {
+    if (!authorizedRelay(String(req.headers.authorization || "").replace(/^Bearer /,"")))
+      return respond(req,res,401,{error:"unauthorized"});
+    let raw="";
+    try {
+      for await (const part of req) {
+        raw+=part.toString();
+        if(raw.length>1536)return respond(req,res,413,{error:"payload too large"});
+      }
+      const body=JSON.parse(raw);
+      const url=new URL(String(body.url||""));
+      if(url.protocol!=="https:" || !/^[a-z0-9-]+\.trycloudflare\.com$/i.test(url.hostname) ||
+         url.port || url.pathname!=="/" || url.search || url.hash) throw new Error("invalid relay host");
+      const maxExpires=Date.now()+2*60*60*1000;
+      const expires=Number(body.expires);
+      if(!Number.isFinite(expires)||expires<=Date.now()||expires>maxExpires)
+        throw new Error("invalid expiration");
+      fs.mkdirSync(path.dirname(RELAY_FILE),{recursive:true,mode:0o700});
+      fs.writeFileSync(RELAY_FILE,JSON.stringify({url:url.origin,expires}),{mode:0o600});
+      return respond(req,res,200,{ok:true,relay:"ollama",expires});
+    } catch { return respond(req,res,400,{error:"invalid relay configuration"}); }
+  }
   if (req.url === "/health" && req.method === "GET") {
     return respond(req, res, 200, { ok: true, service: "Bob Live Session", authenticated: false });
   }
