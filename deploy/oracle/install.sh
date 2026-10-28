@@ -33,10 +33,10 @@ if ! command -v node >/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 2
 fi
 id "$RUN_USER" >/dev/null 2>&1 || useradd -m -s /usr/sbin/nologin "$RUN_USER"
 if [[ -d "$APP/.git" ]]; then
-  git -C "$APP" fetch origin main
-  git -C "$APP" checkout main
-  git -C "$APP" merge --ff-only origin/main
-  git -C "$APP" submodule update --init --recursive
+  runuser -u "$RUN_USER" -- git -C "$APP" fetch origin main
+  runuser -u "$RUN_USER" -- git -C "$APP" checkout main
+  runuser -u "$RUN_USER" -- git -C "$APP" merge --ff-only origin/main
+  runuser -u "$RUN_USER" -- git -C "$APP" submodule update --init --recursive
 else
   git clone --recurse-submodules https://github.com/danilo631/Bob_live.git "$APP"
 fi
