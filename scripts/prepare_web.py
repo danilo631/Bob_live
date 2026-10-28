@@ -159,7 +159,8 @@ progressive_web_app/enabled=false
 """)
     # A voz no plano Render Free e gerada pelo navegador, sem Python/TTS no servidor.
     from subprocess import run
-    run(["python3", str(ROOT / "deploy/render/patch_webspeech.py"), str(game)], check=True)
+    import sys
+    run([sys.executable, str(ROOT / "deploy/render/patch_webspeech.py"), str(game)], check=True)
 
     shutil.copy2(UPSTREAM / "LICENSE", OUTPUT / "LICENSE-original.txt")
     shutil.copy2(UPSTREAM / "NOTICE.md", OUTPUT / "NOTICE-original.md")
