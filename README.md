@@ -2,17 +2,17 @@
 
 Projeto adaptado de [LSzerodev/bob-live](https://github.com/LSzerodev/bob-live), por Luis Felipe, para lives TikTok de **@nexttec_1**.
 
-## Versão híbrida: Vercel + Render + GitHub Actions
+## Uma unica pagina: Render + IA Vercel + Ollama Actions
 
-**[Guia das três plataformas](deploy/vercel/README.md)** · **[Render](deploy/render/README.md)** · **[Workflow Godot Web](.github/workflows/deploy-web.yml)** · **[Testes backend Render](.github/workflows/test-render.yml)** · **[Pacote Web gerado (Release)](https://github.com/danilo631/Bob_live/releases/tag/web-latest)**
+**[Arquitetura de site unico](deploy/ARCHITECTURE.md)** · **[Guia das três plataformas](deploy/vercel/README.md)** · **[Render](deploy/render/README.md)** · **[Workflow Godot Web](.github/workflows/deploy-web.yml)** · **[Testes backend Render](.github/workflows/test-render.yml)** · **[Pacote Web gerado (Release)](https://github.com/danilo631/Bob_live/releases/tag/web-latest)**
 
-- **GitHub Actions** compila e testa o Godot 4.7.2, produz `bob-live-web.zip` e disponibiliza uma Release pública.
+- **GitHub Actions** compila e testa o Godot 4.7.2, produz `bob-live-web.zip` e disponibiliza uma Release pública. GitHub Pages opcional hospeda apenas o JSON da IA e redireciona para o Render.
 - **Vercel** executa exclusivamente a API neural `/api/brain` como função serverless; não hospeda uma segunda cópia do jogo. A raiz encaminha para o site principal Render.
 - **Ollama no Actions (sob demanda, não 24h):** o Qwen2.5 0.5B pode responder ao Render pelo relay protegido durante uma sessão manual limitada, com fallback neural após expirar.
 - **Render Static Site** baixa apenas o ZIP pronto e hospeda o jogo 3D WebGL2 com CDN.
 - **Render Free Web Service** executa o Node.js, conector TikTok, filas de chat/presentes e API/WebSocket autenticados.
 - **Nova rede neural de intenções** classifica 49 assuntos, treinada com 251 frases em português e 147 respostas predefinidas; funciona sem API. **OpenRouter** (opcional com chave pessoal) responde a assuntos abertos quando não há Ollama ativo.
-- **Web Speech API do navegador** fala pt-BR e aproxima o movimento da boca sem Ollama/Piper consumindo RAM do Render.
+- **Voz do navegador** com dois modos: cartoon brasileira rápida/aguda ou neural **Kokoro-82M pt-BR** (WASM, download pesado opcional), sem consumir RAM do Render para TTS. A voz não reproduz a dublagem original.
 - **OBS/TikTok LIVE Studio** captura o navegador e áudio para uma live autorizada.
 
 **Atenção sobre 24h:** o Render Free pode suspender serviços depois de 15 minutos sem tráfego real de entrada, e o Actions também não é um servidor permanente. O monitor permanece ativo enquanto o backend está acordado; o site estático pode permanecer acessível enquanto a plataforma estiver disponível, mas isso não garante a continuidade da IA/TikTok ou de uma transmissão de vídeo 24 horas. Consulte o [guia Render](deploy/render/README.md) para requisitos e testes reais.
@@ -20,6 +20,8 @@ Projeto adaptado de [LSzerodev/bob-live](https://github.com/LSzerodev/bob-live),
 Endpoints previstos após implantação:
 - `https://bob-live-web-nexttec.onrender.com/` — site e personagem 3D.
 - `https://bob-live-api-nexttec.onrender.com/health` — status público mínimo da API, não é teste de IA.
+
+**Render e Vercel integrados:** a chave `BRAIN_API_KEY` ja foi compartilhada entre os dois sem expor o segredo no GitHub. O endpoint privado da Vercel pode ser chamado pelo Render e usa fallback local na falha. A validacao com uma LIVE real ainda depende de a conta estar transmitindo.
 
 **Render já provisionado:** o site `bob-live-web-nexttec.onrender.com` e o backend `bob-live-api-nexttec.onrender.com` foram criados em plano Free. A Vercel foi conectada e possui projeto `bob-live-nexttec` com função neural. O Render usa chave privada para encaminhar perguntas. O classificador não exige chave; OpenRouter exige `OPENAI_API_KEY`; o relay temporário Ollama exige `BOB_OLLAMA_RELAY_KEY` igual no Render e no GitHub Actions.
 
