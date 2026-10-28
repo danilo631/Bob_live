@@ -5,16 +5,16 @@ const { spawn } = require("node:child_process");
 const crypto = require("node:crypto");
 
 const secret = crypto.randomBytes(20).toString("hex");
+const origin = process.env.BOB_PUBLIC_ORIGIN || "https://danilo631.github.io";
 const child = spawn(process.execPath, ["scripts/public_bridge.js"], {
   cwd: process.cwd(),
-  env: { ...process.env, BOB_SESSION_KEY: secret, PUBLIC_PORT: "9495", PORT: "9399" },
+  env: { ...process.env, BOB_SESSION_KEY: secret, PUBLIC_PORT: "9495", PORT: "9399", BOB_PUBLIC_HOST: "127.0.0.1", BOB_PUBLIC_ORIGIN: origin },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let stderr = "";
 child.stderr.on("data", chunk => { stderr += chunk.toString(); });
 
 const url = "http://127.0.0.1:9495";
-const origin = "https://danilo631.github.io";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   try {
