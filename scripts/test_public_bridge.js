@@ -43,6 +43,18 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.equal(alt.headers.get("access-control-allow-origin"),alternate);
     const evil=await fetch(url+"/api/status", {method:"OPTIONS",headers:{Origin:"https://evil.example"}});
     assert.equal(evil.status,403);
+    const brainAsk = await fetch(url + "/api/brain/ask", {method:"POST",headers:{
+      Origin:origin,Authorization:"Bearer "+secret,"Content-Type":"application/json"
+    },body:JSON.stringify({question:"qual é seu nome?"})});
+    assert.equal(brainAsk.status,200);
+    const answer=await brainAsk.json();
+    assert.equal(answer.ok,true);
+    assert.ok(typeof answer.answer?.text==="string");
+    assert.equal(answer.source,"neural-local");
+    const brainOutside = await fetch(url+"/api/brain/ask",{method:"POST",headers:{
+      Origin:"https://evil.example",Authorization:"Bearer "+secret
+    },body:"{}"});
+    assert.equal(brainOutside.status,403);
     const brain = await fetch(url + "/api/brain/status", { headers: { Origin: origin, Authorization: "Bearer " + secret } });
     assert.equal(brain.status, 200);
     const engine=await brain.json();
