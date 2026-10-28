@@ -11,6 +11,7 @@ on:
       - "api/**"
       - "vercel.json"
       - "scripts/test_brain.js"
+      - "scripts/test_voice.js"
       - "scripts/ollama_relay.js"
       - "scripts/test_ollama_relay.js"
       - ".github/workflows/ollama-relay.yml"
@@ -40,6 +41,8 @@ jobs:
           bash -n deploy/render/build-frontend.sh
           python3 -m py_compile deploy/render/patch_webspeech.py deploy/render/prepare_runtime.py
           node --check site/main.js
+          node --check site/voice.js
+          node scripts/test_voice.js
           node --check deploy/render/server.js
           node --check api/brain.js
           node --check brain/index.js
