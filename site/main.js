@@ -136,6 +136,23 @@
       sessionStorage.removeItem("bob_live_ws");
     }
   });
+  const brainButton=$("#askBrain");
+  const brainInput=$("#brainQuestion");
+  const brainOutput=$("#brainAnswer");
+  if(brainButton)brainButton.addEventListener("click",async()=>{
+    if(!base||!secret){brainOutput.textContent="Conecte primeiro o servidor Render.";return;}
+    const q=String(brainInput?.value||"").trim();
+    if(q.length<2||q.length>350){brainOutput.textContent="Digite uma pergunta de 2 a 350 caracteres.";return;}
+    brainButton.disabled=true;
+    try{
+      const r=await api("/api/brain/ask",{method:"POST",body:JSON.stringify({question:q})});
+      if(r.answer?.text){
+        brainOutput.textContent=r.answer.text+" · via "+r.source;
+        window.BobVoice?.speak(r.answer.text);
+      }else brainOutput.textContent="Pergunta ainda não cadastrada. Ative o Ollama ou OpenRouter para perguntas abertas.";
+    }catch(e){brainOutput.textContent="Falha de IA: "+e.message;}
+    finally{brainButton.disabled=false;}
+  });
   simulate.addEventListener("click", async () => {
     try {
       await api("/api/simulate/chat", { method: "POST", body: JSON.stringify({ user: "TesteWeb", comment: "Oi Bob! Conta uma piada curtinha?" }) });
