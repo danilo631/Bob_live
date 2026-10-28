@@ -41,7 +41,7 @@ replace_once(speech,
 # Rede neural pequena: Vercel autenticada (se conectada), fallback sempre local.
 ai=DST/"src/ai.js"
 replace_once(ai,"const cfg = require('./config');",
-"""const cfg = require('./config');
+r"""const cfg = require('./config');
 const localBrain = require('../../../brain');
 async function neuralReply(question, name) {
   const remote = process.env.BRAIN_REMOTE_URL || '';
