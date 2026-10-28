@@ -48,6 +48,7 @@ jobs:
         run: |
           python3 scripts/prepare_web.py
           node --check .generated/server/src/bridge.js
+          node --check scripts/public_bridge.js
           python3 scripts/test_web_adapter.py
 
       - name: Baixar Godot 4.7.2 e templates Web
@@ -69,8 +70,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p site/game
-          godot --headless --path .generated/game --import
-          godot --headless --path .generated/game --export-release "Web" "$GITHUB_WORKSPACE/site/game/index.html"
+          godot --headless --path .generated/game --import 2>&1 | tee /tmp/godot-import.log
+          if grep -Eq "SCRIPT ERROR|Failed to load script|Parse Error|Compile Error" /tmp/godot-import.log; then
+            echo "::error::Erro GDScript na importacao"
+            exit 1
+          fi
+          godot --headless --path .generated/game --export-release "Web" "$GITHUB_WORKSPACE/site/game/index.html" 2>&1 | tee /tmp/godot-export.log
+          if grep -Eq "SCRIPT ERROR|Failed to load script|Parse Error|Compile Error" /tmp/godot-export.log; then
+            echo "::error::Erro GDScript na exportacao"
+            exit 1
+          fi
           test -s site/game/index.html
           test -s site/game/index.wasm
           test -s site/game/index.pck
@@ -100,6 +109,8 @@ jobs:
     steps:
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Recuperar site validado
         uses: actions/download-artifact@v4
         with:
