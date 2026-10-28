@@ -1,0 +1,38 @@
+# Render Blueprint: frontend CDN + backend leve
+# GitHub Actions gera o WASM e empacota tudo no GitHub Release web-latest.
+# Render free nao permite garantir funcionamento 24/7 sem trafego real.
+services:
+  - type: web
+    name: bob-live-api-nexttec
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: bash deploy/render/build-backend.sh
+    startCommand: node deploy/render/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TIKTOK_USERNAME
+        value: nexttec_1
+      - key: BOB_PUBLIC_ORIGIN
+        value: https://bob-live-web-nexttec.onrender.com
+      - key: BOB_SESSION_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENAI_MODEL
+        value: openrouter/free
+      - key: OPENAI_API_KEY
+        sync: false
+  - type: web
+    name: bob-live-web-nexttec
+    runtime: static
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: bash deploy/render/build-frontend.sh
+    staticPublishPath: site
