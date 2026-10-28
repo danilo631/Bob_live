@@ -33,6 +33,7 @@ services:
     name: bob-live-web-nexttec
     runtime: static
     branch: main
-    autoDeployTrigger: commit
+    # Aguarda GitHub Actions exportar Godot e publicar ZIP no Release.
+    autoDeployTrigger: checksPass
     buildCommand: bash deploy/render/build-frontend.sh
     staticPublishPath: site
