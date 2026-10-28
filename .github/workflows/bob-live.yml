@@ -185,7 +185,7 @@ jobs:
           npm ci --prefix .generated/server
           node --check scripts/public_bridge.js
           python3 scripts/test_web_adapter.py
-      - name: Sessao web: TikTok, Qwen e voz no GitHub Actions
+      - name: "Sessao web: TikTok, Qwen e voz no GitHub Actions"
         if: inputs.modo == 'web-live'
         shell: bash
         run: |
