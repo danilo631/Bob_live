@@ -1,10 +1,31 @@
-# Bob Live — página web + IA e voz no GitHub Actions
+# Bob Live — Web, IA e voz para @nexttec_1
 
-Adaptação do [Live Fenda do Biquíni de Luis Felipe / LSzerodev](https://github.com/LSzerodev/bob-live) para **@nexttec_1**. O código original é preservado como submódulo em `upstream/`.
+Projeto baseado no [bob-live de Luis Felipe](https://github.com/LSzerodev/bob-live), com duas formas de executar.
 
-**Página:** https://danilo631.github.io/Bob_live/  
-**Workflow de sessões:** https://github.com/danilo631/Bob_live/actions/workflows/bob-live.yml  
-**Workflow de publicação:** https://github.com/danilo631/Bob_live/actions/workflows/deploy-web.yml
+## Opção principal: servidor 24h (Oracle Always Free)
+
+**Nova versão recomendada:** [Guia completo de instalação Oracle 24h](deploy/oracle/README.md).
+
+Uma VM Ubuntu ARM64 executa **TikTok + Ollama/Qwen2.5 + voz Piper + site Godot 3D**. Os serviços são gerenciados pelo systemd e a página e WebSocket usam o **mesmo domínio HTTPS via Caddy**. Não é necessário manter um runner do GitHub Actions em execução.
+
+Instalação na VM Oracle, após configurar a instância Always Free e abrir as portas 80/443:
+
+```bash
+sudo apt-get update && sudo apt-get install -y git curl
+git clone --recurse-submodules https://github.com/danilo631/Bob_live.git
+cd Bob_live
+sudo bash deploy/oracle/install.sh
+```
+
+O instalador informa o endereço HTTPS (por padrão `IP.sslip.io`) e grava uma senha de sessão em `/etc/bob-live/bob.env`. Nenhuma VM foi criada na sua conta ainda: é necessário provisioná-la pela Oracle.
+
+**Limitação fundamental:** o *site e backend* podem ficar disponíveis 24h, mas **uma transmissão de vídeo TikTok 24h requer um encoder/RTMP autorizado independente**, não incluído no instalador. O navegador só desenha o jogo enquanto estiver aberto. Leia os direitos do personagem/voz/ativos antes de fazer lives.
+
+## Opção de testes: GitHub Actions temporário
+
+O modo `web-live` do Actions usa um runner temporário e um túnel Cloudflare Quick Tunnel; ele não pode substituir uma VM permanente. As instruções abaixo descrevem essa versão legada de testes.
+
+---
 
 ## Tudo na nuvem, sem instalar IA no PC
 
