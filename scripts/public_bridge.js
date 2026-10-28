@@ -24,6 +24,13 @@ for (const item of String(process.env.BOB_PUBLIC_ORIGINS || "").split(",")) {
 }
 const trustedOrigin = req => ORIGINS.has(req.headers.origin);
 const SECRET = process.env.BOB_SESSION_KEY || "";
+// Token de escopo limitado so para visualizacao do Godot no LIVE Studio.
+// A chave admin nao vai na URL da source; trocar BOB_SESSION_KEY revoga links antigos.
+const STUDIO_TOKEN = crypto.createHmac("sha256", SECRET).update("bob-live-studio-source-v2").digest("base64url");
+function authorizedStudio(candidate) {
+  return typeof candidate==="string"&&candidate.length===STUDIO_TOKEN.length &&
+    crypto.timingSafeEqual(Buffer.from(candidate),Buffer.from(STUDIO_TOKEN));
+}
 const RELAY_KEY = process.env.BOB_OLLAMA_RELAY_KEY || "";
 const RELAY_FILE = path.resolve(__dirname, "../.generated/server/private/ollama-relay.json");
 function authorizedRelay(candidate) {
@@ -64,6 +71,7 @@ const allowed = new Map([
   ["GET /api/status", 0],
   ["GET /api/brain/status", 0],
   ["POST /api/brain/ask", 1024],
+  ["POST /api/studio/link", 0],
   ["POST /api/simulate/chat", 1200],
   ["POST /api/simulate/gift", 1200],
 ]);
@@ -110,6 +118,15 @@ const server = http.createServer(async (req, res) => {
     return respond(req,res,200,{ok:true,engine:ollama?"ollama-actions":"neural-ptbr",
       ollama,vercelOffload:Boolean(process.env.BRAIN_REMOTE_URL && process.env.BRAIN_API_KEY),
       stats:brain.stats()});
+  }
+  if (endpoint==="POST /api/studio/link") {
+    const site=process.env.BOB_PUBLIC_ORIGIN || ORIGIN;
+    if(!/^https:\/\/[a-z0-9.-]+$/.test(site))return respond(req,res,500,{error:"invalid site origin"});
+    return respond(req,res,200,{
+      ok:true,url:site+"/?studio=1#key="+STUDIO_TOKEN,
+      mode:"studio",resolution:"1080x1920",
+      note:"Cole esta URL na Fonte Web do TikTok LIVE Studio. O acesso e limitado ao personagem, nao permite controlar o servidor."
+    });
   }
   const limit = allowed.get(endpoint);
   if (limit) {
@@ -186,7 +203,9 @@ let activeClient = null;
 server.on("upgrade", (req, socket, head) => {
   let url;
   try { url = new URL(req.url, "http://localhost"); } catch { socket.destroy(); return; }
-  if (url.pathname !== "/ws/godot" || !trustedOrigin(req) || !authorized(url.searchParams.get("token"))) {
+  const studio=url.pathname==="/ws/studio";
+  const permitted=studio?authorizedStudio(url.searchParams.get("token")):authorized(url.searchParams.get("token"));
+  if ((!studio && url.pathname!=="/ws/godot") || !trustedOrigin(req) || !permitted) {
     socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
     socket.destroy();
     return;
