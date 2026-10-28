@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# GitHub Actions gera Godot Web. Render so copia o artefato pronto.
+# A interface vem SEMPRE do commit atual. O ZIP do Actions traz apenas game/.
+# Evita 404: o Render nao publica JS antigo enquanto a API ja foi atualizada.
 ASSET="https://github.com/danilo631/Bob_live/releases/download/web-latest/bob-live-web.zip"
-echo "Baixando export Web publicado pelo GitHub Actions..."
-curl -fL --retry 3 --retry-delay 2 "$ASSET" -o /tmp/bob-live-web.zip
-unzip -oq /tmp/bob-live-web.zip -d site
+echo "Baixando somente o pacote Godot compilado pelo GitHub Actions..."
+curl -fsSL --retry 3 --retry-delay 2 "$ASSET" -o /tmp/bob-live-web.zip
+mkdir -p /tmp/bob-live-web-game
+unzip -oq /tmp/bob-live-web.zip 'game/*' -d /tmp/bob-live-web-game
+test -s /tmp/bob-live-web-game/game/index.html
+test -s /tmp/bob-live-web-game/game/index.wasm
+test -s /tmp/bob-live-web-game/game/index.pck
+rm -rf site/game
+mv /tmp/bob-live-web-game/game site/game
 test -s site/index.html
-test -s site/game/index.html
-test -s site/game/index.wasm
-test -s site/game/index.pck
-echo "Site Godot Web pronto para CDN Render"
+test -s site/main.js
+test -s site/voice.js
+echo "Interface do commit atual + Godot Web: publicacao consistente, sem sobrescrever rotas atuais."
