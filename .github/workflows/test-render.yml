@@ -7,6 +7,10 @@ on:
       - "scripts/test_public_bridge.js"
       - "site/**"
       - "render.yaml"
+      - "brain/**"
+      - "api/**"
+      - "vercel.json"
+      - "scripts/test_brain.js"
       - ".github/workflows/test-render.yml"
   workflow_dispatch:
 
@@ -34,6 +38,9 @@ jobs:
           python3 -m py_compile deploy/render/patch_webspeech.py deploy/render/prepare_runtime.py
           node --check site/main.js
           node --check deploy/render/server.js
+          node --check api/brain.js
+          node --check brain/index.js
+          node scripts/test_brain.js
       - name: Preparar Node sem motor de IA na memoria
         run: bash deploy/render/build-backend.sh
       - name: Testar modo browser TTS
@@ -41,6 +48,7 @@ jobs:
           node --check .generated/server/src/speech.js
           grep -q "browser_tts: Boolean(c.browser_tts)" .generated/server/src/speech.js
           grep -q "TTS_PROVIDER === 'browser'" .generated/server/src/speech.js
+          grep -q "neuralReply" .generated/server/src/ai.js
           test -f .generated/server/node_modules/ws/package.json
       - name: Importar patch de Web Speech ao Godot
         run: |
