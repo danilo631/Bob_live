@@ -3,80 +3,75 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#071e2b">
-  <meta name="description" content="Bob Live com IA distribuída, rede neural de respostas, Ollama opcional e voz cartoon em português.">
-  <title>Bob Live | Estúdio Web</title>
-  <link rel="stylesheet" href="./style.css">
-  <script src="./voice.js" defer></script>
-  <script src="./main.js" defer></script>
+  <meta name="theme-color" content="#0b1520">
+  <meta name="description" content="Bob Live — um estúdio para o TikTok LIVE Studio, com IA Render, Vercel e Ollama opcional.">
+  <title>Bob Live — Estúdio TikTok</title>
+  <link rel="stylesheet" href="./style.css?v=3">
+  <script src="./voice.js?v=3" defer></script>
+  <script src="./main.js?v=3" defer></script>
 </head>
 <body>
+<div class="shell">
   <header class="top">
-    <a class="mark" href="./" aria-label="Bob Live, início"><span class="mark-icon">BL</span><span>BOB<span class="accent">LIVE</span><small>ESTÚDIO WEB</small></span></a>
-    <div class="live-label"><span class="dot"></span> GODOT NO NAVEGADOR · SERVER NO RENDER</div>
-    <a class="top-link" href="https://github.com/danilo631/Bob_live" target="_blank" rel="noopener noreferrer">Código no GitHub ↗</a>
+    <a class="identity" href="./"><span class="brand-icon">B</span><span><strong>Bob Live</strong><small>ESTÚDIO INTERATIVO</small></span></a>
+    <div class="top-meta"><span class="online-dot"></span><span>LIVE STUDIO</span><span class="slash">/</span><span>@nexttec_1</span></div>
+    <a class="repo" href="https://github.com/danilo631/Bob_live" rel="noopener noreferrer" target="_blank">GitHub <span>↗</span></a>
   </header>
-  <main class="layout">
-    <section class="preview" aria-label="Prévia do personagem 3D">
-      <div class="preview-top"><strong>PRÉVIA 9:16</strong><span>1080 × 1920</span></div>
-      <div class="video" id="video" aria-live="polite">
-        <div id="placeholder" class="placeholder">
-          <div class="glow"><span class="face" aria-hidden="true">▣</span></div>
-          <h1>Seu personagem.<br><em>Sua live.</em></h1>
-          <p>Personagem 3D na web; TikTok e IA via Render/OpenRouter, com voz brasileira produzida no navegador.</p>
-          <button id="start" class="primary" type="button">Abrir personagem 3D <span>↗</span></button>
-          <p class="micro">Clique no jogo depois de abrir para permitir o áudio do navegador.</p>
+  <main class="workspace">
+    <section class="stage-section" aria-label="Palco do Bob">
+      <div class="section-head"><div><span class="overline">VISUALIZAÇÃO</span><h1>Seu palco, <em>ao vivo.</em></h1></div><span class="stage-badge">9:16 · 1080 × 1920</span></div>
+      <div class="stage-frame">
+        <div class="stage" id="video">
+          <div class="stage-placeholder" id="placeholder">
+            <div class="preview-character"><div class="character-eyes"><i></i><i></i></div><div class="character-mouth"></div></div>
+            <strong>Personagem pronto.</strong>
+            <p>Abra o palco 3D para conferir a animação e a voz.</p>
+            <button id="start" class="main-btn" type="button">Abrir palco 3D <span>↗</span></button>
+          </div>
+          <iframe id="game" title="Palco Godot 3D" allow="autoplay; fullscreen" allowfullscreen loading="eager"></iframe>
+          <div class="studio-error" id="studioError" role="status" hidden></div>
         </div>
-        <iframe id="game" title="Personagem 3D Godot" allow="autoplay; fullscreen" allowfullscreen loading="eager"></iframe>
       </div>
-      <div class="preview-tools">
-        <button id="full" type="button" disabled>⛶ Tela cheia</button>
-        <button id="reload" type="button" disabled>↻ Reiniciar jogo</button>
+      <div class="stage-foot">
         <span id="state" role="status">Aguardando início</span>
+        <div><button id="reload" type="button" disabled>Reiniciar</button><button id="full" type="button" disabled>Tela cheia</button></div>
       </div>
     </section>
-    <aside class="controls">
-      <span class="eyebrow">ESTÚDIO WEB · RENDER + GITHUB</span>
-      <h2>Seu Bob <span>na nuvem.</span></h2>
-      <p>Um único estúdio: Render conecta o TikTok; Vercel atende pedidos de IA; Actions compila Godot e pode executar Ollama. A voz é sintetizada localmente no navegador.</p>
-      <div class="steps">
-        <div class="step"><span class="number">01</span><div><strong>Ative a sessão na nuvem</strong><p>Use o servidor do Render. Para uma demonstração sem API de IA, o bot responde com frases de reserva. A qualidade melhora ao adicionar uma chave do OpenRouter nos Secrets do serviço.</p><a class="underlink" href="https://github.com/danilo631/Bob_live/actions/workflows/bob-live.yml" target="_blank" rel="noopener noreferrer">Ver builds no GitHub ↗</a></div></div>
-        <div class="step"><span class="number">02</span><div><strong>Conecte com segurança</strong><p>A página preencherá o endereço Render quando implantada. Informe a senha configurada no serviço Render (BOB_SESSION_KEY).</p></div></div>
-      </div>
-      <form id="sessionForm" class="session-form">
-        <label for="tunnel">URL do servidor Render HTTPS</label>
-        <input id="tunnel" name="tunnel" type="url" inputmode="url" placeholder="https://meu-servidor.sslip.io" autocomplete="off" required>
-        <label for="sessionKey">Senha da sessão (Render BOB_SESSION_KEY)</label>
-        <input id="sessionKey" name="sessionKey" type="password" placeholder="BOB_SESSION_KEY" autocomplete="off" minlength="20" required>
-        <button type="submit" class="primary">Conectar IA + Voz + TikTok</button>
-        <label for="voiceMode">Motor de voz (mesmo site)</label>
-        <select id="voiceMode" name="voiceMode" style="width:100%;padding:12px;border:1px solid #345c68;border-radius:8px;background:#102f3f;color:#fff">
-          <option value="system">Cartoon brasileira — rápida e aguda (leve)</option>
-          <option value="neural">Kokoro neural 82M — pt-BR (experimental, download ~100 MB)</option>
-        </select>
-        <button id="audio" type="button">Ativar ou testar voz</button>
-        <p id="voiceStatus" role="status" class="micro">Voz cartoon brasileira pronta. O modelo Kokoro é opcional e pode ser pesado em celulares.</p>
-        <p id="serverStatus" role="status">Sessão não conectada. O personagem 3D pode ser aberto sem IA.</p>
-        <label for="brainQuestion">Testar respostas da IA (Render + Vercel)</label>
-        <input id="brainQuestion" maxlength="350" placeholder="Ex.: Bob, qual é seu jogo favorito?" autocomplete="off">
-        <button id="askBrain" type="button">Perguntar ao Bob</button>
-        <p id="brainAnswer" role="status" class="micro">A resposta também pode ser falada com a voz selecionada.</p>
-        <div class="tests">
-          <button type="button" id="simulate" disabled>Testar comentário</button>
-          <button type="button" id="gift" disabled>Testar presente</button>
-        </div>
-      </form>
-      <div class="step"><span class="number">03</span><div><strong>Transmita a janela do navegador</strong><p>Abra o personagem 3D acima, habilite áudio com um clique e capture a janela no OBS ou TikTok LIVE Studio. Nada de Ollama ou Node instalado no seu PC.</p></div></div>
-      <div class="connection">
-        <span class="pill">TIKTOK</span><strong>@nexttec_1</strong><small>Conexão TikTok feita pelo Render; a transmissão de vídeo precisa de OBS ou LIVE Studio no PC</small>
-      </div>
-      <div class="actions">
-        <a href="https://dashboard.render.com/" target="_blank" rel="noopener noreferrer">Configurar senha no Render ↗</a>
-        <a href="https://github.com/danilo631/Bob_live/actions" target="_blank" rel="noopener noreferrer">Builds do Actions ↗</a>
-      </div>
-      <div class="warning"><b>Limites gratuitos:</b> o backend Render Free suspende após períodos sem tráfego, não garantindo atividade ininterrupta. A voz cartoon e o modelo neural têm timbres próprios, não são cópias da voz oficial do Bob; o conector TikTok não oficial pode falhar. Para 24h garantidas, precisa de hospedagem sem suspensão.</div>
+    <aside class="control-panel">
+      <div class="panel-intro"><span class="overline">PAINEL DE CONTROLE</span><h2>Pronto para sua live.</h2><p>Uma página, tudo conectado. Render recebe o TikTok; Vercel ajuda nas respostas; Actions compila o jogo e pode rodar Ollama temporário.</p></div>
+      <section class="section-card">
+        <div class="card-title"><span class="step">01</span><div><h3>Conectar uma vez</h3><p>O servidor já está configurado. Cole apenas a senha do Render nesta aba; a fonte Web não terá acesso a ela.</p></div></div>
+        <form id="sessionForm">
+          <input id="tunnel" name="tunnel" type="hidden" value="https://bob-live-api-nexttec.onrender.com/">
+          <label for="sessionKey">Chave administrativa do estúdio</label>
+          <input id="sessionKey" name="sessionKey" type="password" minlength="20" maxlength="256" autocomplete="off" placeholder="BOB_SESSION_KEY" required>
+          <button class="main-btn wide" id="connect" type="submit">Conectar servidor <span>→</span></button>
+        </form>
+        <p class="status-line" id="serverStatus" role="status">Aguardando conexão com o Render.</p>
+        <div class="mini-status"><span id="brainStatus">IA: não verificada</span><span id="tiktokStatus">TikTok: aguardando</span></div>
+      </section>
+      <section class="section-card" id="studioLinkArea">
+        <div class="card-title"><span class="step">02</span><div><h3>Link para LIVE Studio</h3><p>Copie a fonte Web. Ao abrir no TikTok LIVE Studio, ela carrega o personagem automaticamente, sem painel e sem senha administrativa.</p></div></div>
+        <div class="link-wrap"><input id="studioLink" aria-label="Link da fonte web" readonly placeholder="Conecte o servidor para gerar o link"><button id="copyLink" type="button" disabled>Copiar</button></div>
+        <small class="hint">Fonte Web: 1080 × 1920. Ative o áudio da fonte no LIVE Studio.</small>
+      </section>
+      <section class="section-card">
+        <div class="card-title"><span class="step">03</span><div><h3>Voz do personagem</h3><p>Tom brasileiro divertido. A voz neural é opcional e roda no navegador, não no servidor.</p></div></div>
+        <label for="voiceMode">Síntese de voz</label>
+        <select id="voiceMode"><option value="system">Cartoon brasileira · leve</option><option value="neural">Kokoro 82M · neural experimental</option></select>
+        <button id="audio" class="secondary-btn" type="button">Ouvir teste de voz <span>▶</span></button>
+        <p id="voiceStatus" class="hint" role="status">Teste o som antes de adicionar a fonte Web.</p>
+      </section>
+      <section class="section-card">
+        <div class="card-title"><span class="step">04</span><div><h3>Testar IA e presentes</h3><p>Confira as respostas antes de entrar ao vivo.</p></div></div>
+        <label for="brainQuestion">Pergunta para o Bob</label>
+        <div class="question-row"><input id="brainQuestion" maxlength="350" placeholder="Oi Bob! Conta uma piada."><button id="askBrain" type="button">Enviar</button></div>
+        <p id="brainAnswer" class="answer" role="status" aria-live="polite">As respostas aparecerão aqui.</p>
+        <div class="test-row"><button id="simulate" class="secondary-btn" type="button" disabled>Testar comentário</button><button id="gift" class="secondary-btn" type="button" disabled>Enviar rosa teste</button></div>
+      </section>
+      <p class="small-print">A conexão ao TikTok só recebe eventos quando <strong>@nexttec_1</strong> estiver em LIVE. O Render Free pode suspender por inatividade. Voz e vídeo da fonte Web dependem do suporte de áudio do LIVE Studio.</p>
     </aside>
   </main>
-  <footer>Projeto original: <a href="https://github.com/LSzerodev/bob-live">Luis Felipe / LSzerodev</a> · <a href="https://t.me/+dodaVsUWVoQ0Yjhh">Comunidade do autor</a> · Personagem e assets com direitos de terceiros; veja <a href="https://github.com/danilo631/Bob_live/blob/main/upstream/NOTICE.md">créditos e licenças</a>.</footer>
-</body>
-</html>
+  <footer class="footer"><span>Bob Live · único estúdio</span><span>Base: <a href="https://github.com/LSzerodev/bob-live" rel="noopener noreferrer" target="_blank">LSzerodev</a> · <a href="https://github.com/danilo631/Bob_live/blob/main/deploy/ARCHITECTURE.md" target="_blank" rel="noopener noreferrer">Arquitetura</a></span></footer>
+</div>
+</body></html>
