@@ -63,6 +63,25 @@ def prepare():
         'return load_wav_bytes(FileAccess.get_file_as_bytes(path))\n\nstatic func load_wav_bytes(bytes: PackedByteArray) -> AudioStreamWAV:\n\tif bytes.size() < 44',
     )
 
+    # Nenhum acesso ao disco no Web: o WAV vai pelo WebSocket em base64.
+    replace_once(wav, '"WavLoader: arquivo invalido: %s" % path', '"WavLoader: arquivo WAV invalido"')
+    replace_once(wav, '"WavLoader: wav sem dados: %s" % path', '"WavLoader: WAV sem dados"')
+
+    # A pagina estaticamente publicada guarda URL e credencial apenas na sessao do navegador.
+    replace_once(
+        main,
+        'var url: String = OS.get_environment("LIVE_WS_URL")\n\tif url != "":\n\t\tbridge.url = url',
+        '''var url: String = OS.get_environment("LIVE_WS_URL")
+    if OS.has_feature("web"):
+        var browser_url: Variant = JavaScriptBridge.eval("window.sessionStorage.getItem('bob_live_ws')", true)
+        if browser_url is String and str(browser_url).begins_with("wss://"):
+            url = str(browser_url)
+        else:
+            url = "wss://no-session.invalid/ws/godot"
+    if url != "":
+        bridge.url = url'''.replace("    ", "\\t"),
+    )
+
     bridge = server / "src/bridge.js"
     replace_once(bridge, "const EventEmitter = require('events');", "const EventEmitter = require('events');\nconst fs = require('fs');\nconst path = require('path');")
     replace_once(bridge, "this.socket = null;\n    this.lastByType = {};",
