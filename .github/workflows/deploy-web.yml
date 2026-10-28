@@ -46,6 +46,8 @@ jobs:
           npm ci --prefix upstream/server
           npm test --prefix upstream/server
           node --check site/main.js
+          node --check site/voice.js
+          node scripts/test_voice.js
 
       - name: Preparar modificacoes Godot Web e Node
         run: |
