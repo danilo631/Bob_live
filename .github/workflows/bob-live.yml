@@ -126,7 +126,8 @@ jobs:
           base="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium"
           curl -fL --retry 3 "$base/pt_BR-faber-medium.onnx" -o models/pt_BR-faber-medium.onnx
           curl -fL --retry 3 "$base/pt_BR-faber-medium.onnx.json" -o models/pt_BR-faber-medium.onnx.json
-          test -s models/pt_BR-faber-medium.onnx && test -s models/pt_BR-faber-medium.onnx.json
+          echo "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7  models/pt_BR-faber-medium.onnx" | sha256sum -c -
+          test -s models/pt_BR-faber-medium.onnx.json
           nohup python -u scripts/piper_server.py --model models/pt_BR-faber-medium.onnx >/tmp/bob-piper.log 2>&1 &
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:8022/health >/dev/null; then break; fi
