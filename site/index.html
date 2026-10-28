@@ -57,6 +57,10 @@
         <button id="audio" type="button">Ativar ou testar voz</button>
         <p id="voiceStatus" role="status" class="micro">Voz cartoon brasileira pronta. O modelo Kokoro é opcional e pode ser pesado em celulares.</p>
         <p id="serverStatus" role="status">Sessão não conectada. O personagem 3D pode ser aberto sem IA.</p>
+        <label for="brainQuestion">Testar respostas da IA (Render + Vercel)</label>
+        <input id="brainQuestion" maxlength="350" placeholder="Ex.: Bob, qual é seu jogo favorito?" autocomplete="off">
+        <button id="askBrain" type="button">Perguntar ao Bob</button>
+        <p id="brainAnswer" role="status" class="micro">A resposta também pode ser falada com a voz selecionada.</p>
         <div class="tests">
           <button type="button" id="simulate" disabled>Testar comentário</button>
           <button type="button" id="gift" disabled>Testar presente</button>
