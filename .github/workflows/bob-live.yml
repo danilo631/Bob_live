@@ -14,7 +14,7 @@ on:
         required: true
         type: choice
         default: teste-local
-        options: [validacao, teste-local, monitorar-live]
+        options: [validacao, teste-local, monitorar-live, web-live]
       usuario:
         description: "Usuario TikTok sem @"
         required: true
@@ -24,7 +24,7 @@ on:
         description: "Modelo local (CPU)"
         required: true
         type: choice
-        default: qwen2.5:1.5b
+        default: qwen2.5:0.5b
         options: ["qwen2.5:1.5b", "qwen2.5:0.5b"]
       duracao_minutos:
         description: "Monitorar por 1 a 330 minutos"
@@ -83,6 +83,7 @@ jobs:
       CUSTOM_TTS_BODY: '{"text":"{text}"}'
       CUSTOM_TTS_HEADERS: "Content-Type: application/json"
       PORT: "9393"
+      BOB_SESSION_KEY: ${{ secrets.BOB_SESSION_KEY }}
     steps:
       - name: Baixar codigo original e submodulo
         uses: actions/checkout@v4
@@ -172,10 +173,81 @@ jobs:
             exit "$code"
           fi
           echo "Monitoramento encerrado. Nao houve transmissao de video."
+      - name: Preparar backend para navegador
+        if: inputs.modo == 'web-live'
+        shell: bash
+        run: |
+          if [[ ! "$BOB_SESSION_KEY" =~ ^.{20,256}$ ]]; then
+            echo "::error::Adicione BOB_SESSION_KEY (20+ caracteres) em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          python3 scripts/prepare_web.py
+          npm ci --prefix .generated/server
+          node --check scripts/public_bridge.js
+          python3 scripts/test_web_adapter.py
+      - name: Sessao web: TikTok, Qwen e voz no GitHub Actions
+        if: inputs.modo == 'web-live'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .generated/server/src/index.js >/tmp/bob-server.log 2>&1 &
+          server_pid=$!
+          node scripts/public_bridge.js >/tmp/bob-public.log 2>&1 &
+          bridge_pid=$!
+          tunnel_pid=0
+          cleanup() { kill "$server_pid" "$bridge_pid" "$tunnel_pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:9393/api/status >/dev/null &&
+               curl -fsS http://127.0.0.1:9494/health >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9494/health
+          # Nunca expor a porta 9393: a ponte 9494 oferece apenas WebSocket e APIs limitadas.
+          curl -fL --retry 3 https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:9494 --loglevel info \
+            >/tmp/bob-cloudflared.log 2>&1 &
+          tunnel_pid=$!
+          url=""
+          for i in $(seq 1 90); do
+            url="$(grep -Eo 'https://[a-z0-9-]+[.]trycloudflare[.]com' /tmp/bob-cloudflared.log | head -1 || true)"
+            if [[ -n "$url" ]]; then break; fi
+            if ! kill -0 "$tunnel_pid" 2>/dev/null; then tail -n 30 /tmp/bob-cloudflared.log; exit 1; fi
+            sleep 2
+          done
+          if [[ -z "$url" ]]; then echo "::error::Tunnel nao criou URL"; tail -n 30 /tmp/bob-cloudflared.log; exit 1; fi
+          echo ""
+          echo "============================================================="
+          echo "SESSAO WEB ATIVA (URL temporaria, sem compartilhar senha)"
+          echo "Pagina: https://danilo631.github.io/Bob_live/"
+          echo "URL do servidor: $url"
+          echo "Senha: valor de BOB_SESSION_KEY em GitHub Secrets."
+          echo "TikTok: @$TIKTOK_USERNAME"
+          echo "Modelo local do runner: $OLLAMA_MODEL"
+          echo "Modo: jogos/voz na pagina; transmita a janela via OBS."
+          echo "============================================================="
+          echo "::notice title=URL temporaria da sessao Bob Live::$url"
+          sleep 5
+          curl -fsS --retry 5 --retry-delay 3 --max-time 15 "$url/health" >/dev/null || {
+            echo "::error::Tunnel nao respondeu ao teste HTTPS"; exit 1;
+          }
+          echo "Ponte HTTPS verificada, aguardando ate $DURATION minutos..."
+          for ((i=0; i<DURATION*60; i+=10)); do
+            for pid in "$server_pid" "$bridge_pid" "$tunnel_pid"; do
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "::error::Um dos processos morreu. Consulte logs de diagnostico."
+                exit 1
+              fi
+            done
+            sleep 10
+          done
+          echo "Sessao encerrada no limite configurado."
       - name: Diagnostico se falhar
         if: failure()
         shell: bash
         run: |
-          for f in /tmp/bob-ollama.log /tmp/bob-piper.log /tmp/bob-server.log; do
+          for f in /tmp/bob-ollama.log /tmp/bob-piper.log /tmp/bob-server.log /tmp/bob-public.log /tmp/bob-cloudflared.log; do
             if test -f "$f"; then echo "=== $f ==="; tail -n 40 "$f"; fi
           done
