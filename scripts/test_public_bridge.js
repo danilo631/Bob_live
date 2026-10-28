@@ -9,7 +9,7 @@ const origin = process.env.BOB_PUBLIC_ORIGIN || "https://danilo631.github.io";
 const alternate = "https://bob-live-nexttec.vercel.app";
 const child = spawn(process.execPath, ["scripts/public_bridge.js"], {
   cwd: process.cwd(),
-  env: { ...process.env, BOB_SESSION_KEY: secret, PUBLIC_PORT: "9495", PORT: "9399", BOB_PUBLIC_HOST: "127.0.0.1", BOB_PUBLIC_ORIGIN: origin, BOB_PUBLIC_ORIGINS:alternate },
+  env: { ...process.env, BOB_SESSION_KEY: secret, PUBLIC_PORT: "9495", PORT: "9399", BOB_PUBLIC_HOST: "127.0.0.1", BOB_PUBLIC_ORIGIN: origin, BOB_PUBLIC_ORIGINS:alternate, BRAIN_API_KEY:"", BRAIN_REMOTE_URL:"" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let stderr = "";
