@@ -1,54 +1,84 @@
-# Bob_live — TikTok @nexttec_1 + GitHub Actions
+# Bob Live — jogo 3D na Web, live no PC
 
-Integração do projeto [Live Fenda do Biquíni](https://github.com/LSzerodev/bob-live) para testar e monitorar eventos da live de **@nexttec_1** em um runner Linux do GitHub Actions, com IA **local no próprio runner**.
+Versão web do projeto **[Live Fenda do Biquíni](https://github.com/LSzerodev/bob-live)** adaptada para a live **TikTok @nexttec_1**.
 
-> **Atenção:** executar o servidor/IA/voz no Actions não equivale a transmitir a imagem ou o áudio do jogo para o TikTok. O Godot, a captura da janela, o áudio e a transmissão de vídeo precisam de uma máquina de streaming (Windows/Linux com OBS e chave de transmissão, quando disponível). Não existe "live de vídeo" hospedada automaticamente neste workflow.
+**Página do jogo:** https://danilo631.github.io/Bob_live/ (requer ativar GitHub Pages e a publicação do workflow).
 
-## Executar
+## Como funciona
 
-1. Abra **Actions > Bob Live | IA e voz locais > Run workflow**.
-2. Informe `nexttec_1` em **usuario**, escolha **teste-local** primeiro e execute.
-3. Após o teste, selecione **monitorar-live** para acompanhar uma live pública existente durante o período escolhido.
-4. Acesse os logs do job para verificar a conexão, carregamento do modelo e eventos.
+- **GitHub Actions**: usa Godot **4.7.2** para exportar o jogo original em HTML5/WebGL 2.0 e publicar um site estático no GitHub Pages. Não mantém servidor, IA ou streaming rodando.
+- **GitHub Pages**: renderiza o personagem 3D no navegador, recebe eventos do jogo via WebSocket e reproduz o WAV no próprio navegador com a boca sincronizada.
+- **Seu PC (Windows 11)**: executa Node.js com o conector TikTok para **@nexttec_1**, **Ollama** para respostas geradas localmente e **SAPI** para a voz offline do Windows.
+- **TikTok LIVE Studio/OBS**: captura o navegador com áudio do PC e transmite para a live que você iniciou. O GitHub não envia vídeo/áudio para o TikTok.
 
-O modo `validacao` apenas testa o código (sem baixar modelos). O modo `teste-local` baixa os modelos e verifica Ollama/Piper sem iniciar uma transmissão. `monitorar-live` conecta ao chat/presentes da live se ela estiver acontecendo; se estiver offline, o conector pode reconectar repetidamente.
+O navegador recebe os WAVs via WebSocket, pois arquivos no disco local não podem ser abertos diretamente por páginas hospedadas. O servidor é acessível **somente em 127.0.0.1:9393**. Não há API pública com suas credenciais.
 
-## Modelos locais (no runner, não na sua máquina)
+## 1. Publicar a página
 
-| Componente | Padrão | Uso |
-|---|---|---|
-| IA de texto | `qwen2.5:1.5b` (~986 MB de download) | Ollama em CPU, conversas em pt-BR |
-| Alternativa leve | `qwen2.5:0.5b` (~398 MB) | Respostas mais rápidas, menor qualidade |
-| Voz pt-BR | `pt_BR-faber-medium` (~63 MB) | Piper TTS/ONNX em CPU, sem chave externa |
+1. Em **Settings → Pages**, selecione **GitHub Actions** como origem da publicação.
+2. Em **Actions**, execute **Publicar Bob Live Web (Godot) → Run workflow** (ou faça um push na \`main\`).
+3. Confira **Validar e exportar Godot WebGL** e depois **Publicar no GitHub Pages**.
+4. Abra https://danilo631.github.io/Bob_live/ e clique em **Abrir personagem 3D**.
 
-O fluxo instala o Ollama, baixa o modelo escolhido e instala Piper com a voz brasileira. Os modelos são baixados de seus fornecedores; **não** são commitados no Git. O áudio do Piper é enviado ao backend pela interface `custom`, que já existe no projeto original. A voz é brasileira, **não é uma clonagem da voz do Bob Esponja**.
+Se o Pages não tiver sido habilitado, o build ainda disponibiliza o artefato **bob-live-web** para baixar no Actions. O site só estará público após o deploy completo. Godot Web necessita **WebGL 2.0** no navegador; o preset foi configurado sem threads (compatível com Pages sem headers especiais).
 
-O Godot não é inicializado aqui e por isso os arquivos WAV não são reproduzidos em uma live por este workflow isolado. Para áudio e vídeo reais, use o projeto original no PC com OBS/TikTok LIVE Studio, ou monte um runner próprio que faça captura e transmissão autorizada.
+## 2. Iniciar IA e conexão TikTok local no Windows
 
-## Arquivos
+Instale **Git**, **Python 3.11+**, **Node.js LTS** e **[Ollama](https://ollama.com/download/windows)**. Em PowerShell:
 
-- `upstream/`: submódulo do projeto original, travado em um commit conhecido para reprodutibilidade.
-- `scripts/piper_server.py`: API local de TTS (somente `127.0.0.1:8022`).
-- `.github/workflows/bob-live.yml`: validação do Node, instalação dos modelos, teste da voz e monitoramento.
+\`\`\`powershell
+git clone --recurse-submodules https://github.com/danilo631/Bob_live.git
+cd Bob_live
+powershell -ExecutionPolicy Bypass -File .\scripts\start_local.ps1
+\`\`\`
 
-O submódulo é baixado automaticamente pelo Actions. Se for clonar localmente, use `git clone --recurse-submodules https://github.com/danilo631/Bob_live.git`.
+A primeira execução:
+- Prepara uma cópia local do jogo/servidor original em \`.generated/\` **sem editar o submódulo do autor**.
+- Instala dependências Node (\`npm ci\`).
+- Inicia ou reutiliza Ollama, baixa **qwen2.5:0.5b** e inicia Node com conexão automática a **@nexttec_1**.
+- Usa a voz offline SAPI do Windows (não é voz clonada do personagem).
 
-## Segurança, limites e direitos
+Modelo de respostas melhor, porém um pouco mais pesado:
+\`\`\`powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_local.ps1 -Modelo "qwen2.5:1.5b"
+\`\`\`
 
-- **Não** coloque cookies, senhas, chaves RTMP nem tokens no README ou no código; use *Settings > Secrets and variables > Actions*.
-- Os logs de Actions de um repositório **público** podem ser visualizados por terceiros e podem conter nomes/comentários da live.
-- Um job do GitHub-hosted Actions dura **no máximo seis horas**. Por segurança o workflow limita a duração de monitoramento a **330 minutos**; a máquina é descartada ao terminar.
-- O conector TikTok é **não oficial**; pode falhar por bloqueios de rede, mudanças no TikTok ou por `@nexttec_1` não estar ao vivo.
-- Não há garantia de acesso remoto ao painel: ele fica em `127.0.0.1` no runner, não publicado na internet.
-- O código base é de **Luis Felipe / LSzerodev**. Consulte `upstream/LICENSE` e `upstream/NOTICE.md`: o modelo 3D, imagem de fundo e personagem têm direitos de terceiros. A licença do modelo de voz Piper deve ser verificada antes de uso comercial.
-- Comunidade do autor original: https://t.me/+dodaVsUWVoQ0Yjhh
+Para outro usuário, altere \`-TikTok "nexttec_1"\`. O painel local, com simulador e configurações, fica em **http://127.0.0.1:9393**. O site no Pages deve ser aberto **no mesmo computador** que executa o servidor. Mantenha o processo PowerShell aberto enquanto estiver ao vivo.
 
-## Problemas comuns
+## 3. Capturar e transmitir
 
-**`user is not live`**: o TikTok não encontrou uma transmissão pública naquele momento. Inicie a live em sua conta e tente novamente.
+1. Inicie sua live TikTok pela forma autorizada para sua conta.
+2. Inicie o servidor local. No painel, confirme que o monitor TikTok conseguiu conectar.
+3. Abra o site no **Chrome/Edge no mesmo PC**, clique para abrir o Godot e depois clique dentro do jogo para liberar áudio.
+4. No TikTok LIVE Studio/OBS, adicione a janela do navegador e capture o **áudio do sistema**. Ajuste a fonte para **9:16** e teste com o simulador do painel antes de transmitir.
 
-**`Cannot connect` / bloqueio do TikTok**: o conector não oficial pode rejeitar o IP compartilhado do GitHub. Para uma live estável, prefira executar no PC ou em um runner próprio.
+**Importante:** navegadores podem bloquear WebSockets de um site HTTPS para a rede local, ou pedir uma permissão de acesso à rede local. Se o navegador bloquear \`ws://127.0.0.1:9393\`, use a versão nativa original em seu PC; o GitHub Pages não consegue burlar políticas do navegador. Não abra porta 9393 no roteador nem faça um túnel público do painel sem autenticação.
 
-**Demora para responder**: Ollama roda sem GPU no Actions; `qwen2.5:0.5b` reduz consumo mas piora a resposta.
+## 4. Desenvolvimento e automação
 
-**Voz não gerada**: confira o passo **Teste local do Piper**. O fallback para SAPI do projeto original não funciona no Linux.
+Arquivos principais:
+
+| Arquivo | Função |
+|---|---|
+| \`upstream/\` | Submódulo Git do projeto original, fixado em commit testado |
+| \`scripts/prepare_web.py\` | Gera cópias adaptadas: impede abrir EXE no navegador, envia WAV via WebSocket e cria preset Web |
+| \`scripts/test_web_adapter.py\` | Testes de compatibilidade, segurança de caminho do áudio e opções Web |
+| \`scripts/start_local.ps1\` | Inicia modelo Ollama, conector TikTok e voz no Windows |
+| \`site/\` | Página estática do GitHub Pages com o jogo 3D |
+| \`.github/workflows/deploy-web.yml\` | Testa, exporta Godot Web e publica |
+| \`.github/workflows/bob-live.yml\` | Diagnóstico temporário de Ollama/Piper dentro do Actions (não transmite live) |
+
+Para validar os patches sem exportar o Godot:
+\`\`\`bash
+git submodule update --init --recursive
+python3 scripts/prepare_web.py
+python3 scripts/test_web_adapter.py
+node --check .generated/server/src/bridge.js
+\`\`\`
+
+## Limites e licenças
+
+- **GitHub Pages é hospedagem estática**: não oferece back-end de IA rodando continuamente. Actions possui tempo de execução limitado e não é substituto de um servidor de streaming.
+- O **conector TikTok é não oficial**, pode sofrer bloqueios, e só recebe eventos de lives existentes; não inicia uma live para você.
+- A página precisa de WebGL 2.0, conexão local permitida pelo navegador e clique para liberar áudio.
+- Preserve os avisos e créditos: [Luis Felipe/LSzerodev](https://github.com/LSzerodev/bob-live), [LICENSE](upstream/LICENSE), [NOTICE](upstream/NOTICE.md), [comunidade do autor](https://t.me/+dodaVsUWVoQ0Yjhh). O uso comercial de personagem, imagem, modelo 3D e voz está sujeito a direitos e licenças de terceiros. Não há afiliação com TikTok ou Nickelodeon.
