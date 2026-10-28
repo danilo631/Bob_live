@@ -11,6 +11,15 @@ const ORIGIN = process.env.BOB_PUBLIC_ORIGIN || "https://danilo631.github.io";
 if (!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(ORIGIN)) {
   throw new Error("BOB_PUBLIC_ORIGIN precisa ser uma origem HTTPS sem caminho");
 }
+// Two explicit trusted frontends may share one protected TikTok backend.
+const ORIGINS = new Set([ORIGIN]);
+for (const item of String(process.env.BOB_PUBLIC_ORIGINS || "").split(",")) {
+  const candidate=item.trim();
+  if (!candidate) continue;
+  if (!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(candidate)) throw new Error("Invalid BOB_PUBLIC_ORIGINS");
+  ORIGINS.add(candidate);
+}
+const trustedOrigin = req => ORIGINS.has(req.headers.origin);
 const SECRET = process.env.BOB_SESSION_KEY || "";
 const PUBLIC_PORT = Number(process.env.PUBLIC_PORT || "9494");
 const BACKEND_PORT = Number(process.env.BOB_BACKEND_PORT || process.env.PORT || "9393");
@@ -27,8 +36,8 @@ function authorized(candidate) {
   return crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(SECRET));
 }
 function headers(req) {
-  return req.headers.origin === ORIGIN ? {
-    "Access-Control-Allow-Origin": ORIGIN,
+  return trustedOrigin(req) ? {
+    "Access-Control-Allow-Origin": req.headers.origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Vary": "Origin",
@@ -51,7 +60,7 @@ const server = http.createServer(async (req, res) => {
   if (req.url === "/health" && req.method === "GET") {
     return respond(req, res, 200, { ok: true, service: "Bob Live Session", authenticated: false });
   }
-  if (req.headers.origin !== ORIGIN) return respond(req, res, 403, { error: "origin forbidden" });
+  if (!trustedOrigin(req)) return respond(req, res, 403, { error: "origin forbidden" });
   if (req.method === "OPTIONS") {
     res.writeHead(204, headers(req));
     return res.end();
@@ -108,7 +117,7 @@ let activeClient = null;
 server.on("upgrade", (req, socket, head) => {
   let url;
   try { url = new URL(req.url, "http://localhost"); } catch { socket.destroy(); return; }
-  if (url.pathname !== "/ws/godot" || req.headers.origin !== ORIGIN || !authorized(url.searchParams.get("token"))) {
+  if (url.pathname !== "/ws/godot" || !trustedOrigin(req) || !authorized(url.searchParams.get("token"))) {
     socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
     socket.destroy();
     return;
