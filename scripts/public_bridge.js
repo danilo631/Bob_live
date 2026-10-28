@@ -63,6 +63,7 @@ function respond(req, res, status, body) {
 const allowed = new Map([
   ["GET /api/status", 0],
   ["GET /api/brain/status", 0],
+  ["POST /api/brain/ask", 1024],
   ["POST /api/simulate/chat", 1200],
   ["POST /api/simulate/gift", 1200],
 ]);
@@ -138,6 +139,34 @@ const server = http.createServer(async (req, res) => {
       coins: 1,
     });
   }
+  if(endpoint==="POST /api/brain/ask") {
+    let parsed={};
+    try { parsed=JSON.parse(body); } catch { return respond(req,res,400,{error:"invalid json"}); }
+    const question=String(parsed.question||"").trim().slice(0,350);
+    if(question.length<2||question.length>350)return respond(req,res,400,{error:"invalid question"});
+    const nickname=String(parsed.nickname||"").trim().slice(0,40);
+    let answer=null, source="neural-local";
+    const target=String(process.env.BRAIN_REMOTE_URL||"");
+    const brainKey=String(process.env.BRAIN_API_KEY||"");
+    if(/^https:\/\/[a-z0-9-]+\.vercel\.app\/api\/brain$/i.test(target)&&brainKey.length>=20) {
+      try{
+        const remote=await fetch(target,{
+          method:"POST",
+          headers:{"Content-Type":"application/json","x-brain-key":brainKey},
+          body:JSON.stringify({question,nickname}),signal:AbortSignal.timeout(1700)
+        });
+        if(remote.ok){
+          const data=await remote.json();
+          if(data.answer&&typeof data.answer.text==="string"&&data.answer.text.length<=220){
+            answer=data.answer;source="vercel-neural";
+          }
+        }
+      }catch{/* vce/surface disconnection: fallback local */}
+    }
+    if(!answer)answer=brain.answer(question,{nickname});
+    return respond(req,res,200,{ok:true,answer,source:answer?source:"not-matched"});
+  }
+
   const opts = {
     hostname: BACKEND_HOST, port: BACKEND_PORT, path: req.url, method: req.method,
     headers: { Host: "127.0.0.1:" + BACKEND_PORT, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
