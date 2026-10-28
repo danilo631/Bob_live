@@ -19,6 +19,10 @@ services:
         value: nexttec_1
       - key: BOB_PUBLIC_ORIGIN
         value: https://bob-live-web-nexttec.onrender.com
+      - key: BOB_PUBLIC_ORIGINS
+        value: https://bob-live-web-nexttec.onrender.com,https://bob-live-nexttec.vercel.app
+      # BOB_OLLAMA_RELAY_KEY, BRAIN_REMOTE_URL, BRAIN_API_KEY e OPENAI_API_KEY
+      # sao configurados no dashboard, nunca versionados.
       - key: BOB_SESSION_KEY
         sync: false
       - key: AI_PROVIDER
