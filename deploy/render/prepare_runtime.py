@@ -89,5 +89,42 @@ replace_once(ai,
   if (cfg.AI_PROVIDER !== 'ollama') {
     const hasKey =""")
 
+
+# Sessao Ollama do Actions (opcional): relay expira automaticamente.
+replace_once(ai,
+"function llmDeltas(messages, opts) {",
+r"""function activeOllamaRelay() {
+  if (!process.env.BOB_OLLAMA_RELAY_KEY || process.env.BOB_OLLAMA_RELAY_KEY.length < 32) return null;
+  try {
+    const item=JSON.parse(fs.readFileSync(path.join(cfg.PRIVATE_DIR,'ollama-relay.json'),'utf8'));
+    if (!Number.isFinite(item.expires) || item.expires <= Date.now()) return null;
+    if (typeof item.url !== 'string' || !/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(item.url)) return null;
+    return item;
+  } catch { return null; }
+}
+async function* ollamaRelayDeltas(messages, opts={}, relay) {
+  const r=await request('Ollama no Actions','openai',relay.url+'/v1/chat/completions',{
+    method:'POST',
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+process.env.BOB_OLLAMA_RELAY_KEY},
+    body:JSON.stringify({model:process.env.OLLAMA_MODEL||'qwen2.5:0.5b',
+      messages,stream:true,max_tokens:Math.min(160,opts.numPredict||130),temperature:0.7}),
+  },45000);
+  for await (const j of sseJson(r)) {
+    const delta=j.choices?.[0]?.delta?.content;
+    if(typeof delta==='string'&&delta) yield delta;
+  }
+}
+function llmDeltas(messages, opts) {
+  const relay=activeOllamaRelay();
+  if(relay)return ollamaRelayDeltas(messages,opts,relay);""")
+replace_once(ai,
+"if (!sensitive && cfg.AI_PROVIDER === 'openai' && !cfg.OPENAI_API_KEY)",
+"if (!sensitive && cfg.AI_PROVIDER === 'openai' && !cfg.OPENAI_API_KEY && !activeOllamaRelay())")
+replace_once(ai,
+"async function eventLine(instruction, names, fallback) {\n  try {",
+"""async function eventLine(instruction, names, fallback) {
+  if (cfg.AI_PROVIDER === 'openai' && !cfg.OPENAI_API_KEY && !activeOllamaRelay()) return fallback;
+  try {""")
+
 # Sem logs de token, sem painel publico: a ponte entrega apenas as APIs permitidas.
 print("Runtime Node para Render: TTS Browser preparado.")
