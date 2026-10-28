@@ -1,0 +1,98 @@
+name: Ollama Qwen 0.5B temporario - Render
+on:
+  workflow_dispatch:
+    inputs:
+      minutos:
+        description: "Duracao da sessao Ollama (5 a 120 min; nao e servidor 24h)"
+        required: true
+        default: "45"
+        type: choice
+        options: ["5", "15", "30", "45", "60", "90", "120"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bob-live-ollama-relay
+  cancel-in-progress: true
+
+jobs:
+  ollama:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 140
+    env:
+      BOB_OLLAMA_RELAY_KEY: ${{ secrets.BOB_OLLAMA_RELAY_KEY }}
+      DURATION_MINUTES: ${{ inputs.minutos }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verificar chave forte compartilhada com o Render
+        shell: bash
+        run: |
+          if [[ ${#BOB_OLLAMA_RELAY_KEY} -lt 32 ]]; then
+            echo "::error::Configure BOB_OLLAMA_RELAY_KEY nos GitHub Secrets e no Render (mesmo valor, >=32 caracteres)."
+            exit 1
+          fi
+          node --check scripts/ollama_relay.js
+      - name: Instalar Ollama e baixar modelo CPU pequeno
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh -o /tmp/install-ollama.sh
+          sh /tmp/install-ollama.sh
+          if ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then
+            OLLAMA_HOST=127.0.0.1:11434 ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          fi
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:11434/api/tags >/dev/null
+          ollama pull qwen2.5:0.5b
+          ollama run qwen2.5:0.5b "Responda em portugues: ola" >/tmp/ollama-smoke.txt
+          test -s /tmp/ollama-smoke.txt
+      - name: Iniciar proxy de IA autenticado e Cloudflare Quick Tunnel
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ollama_relay.js > "$RUNNER_TEMP/ollama-relay.log" 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:9550/health >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9550/health >/dev/null
+          curl -fL --retry 3 https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared tunnel --url http://127.0.0.1:9550 --no-autoupdate > "$RUNNER_TEMP/cloudflared.log" 2>&1 &
+          for i in $(seq 1 90); do
+            URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$RUNNER_TEMP/cloudflared.log" | head -1 || true)
+            if [[ -n "$URL" ]]; then echo "URL=$URL" >> "$GITHUB_ENV"; break; fi
+            sleep 2
+          done
+          if [[ -z "${URL:-}" ]]; then
+            tail -n 30 "$RUNNER_TEMP/cloudflared.log"
+            exit 1
+          fi
+          echo "Ollama tunnel HTTPS temporario gerado."
+      - name: Registrar sessao Ollama no backend Render de forma segura
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPIRES=$(( $(date +%s) * 1000 + (DURATION_MINUTES - 2) * 60000 ))
+          PAYLOAD=$(printf '{"url":"%s","expires":%s}' "$URL" "$EXPIRES")
+          curl -fsS --retry 6 --retry-all-errors --retry-delay 3 --max-time 100 \
+            -X POST "https://bob-live-api-nexttec.onrender.com/internal/ollama/attach" \
+            -H "Authorization: Bearer $BOB_OLLAMA_RELAY_KEY" \
+            -H "Content-Type: application/json" \
+            --data "$PAYLOAD" | grep -q '"ok":true'
+          echo "Sessao Ollama de ${DURATION_MINUTES} minutos vinculada ao Render. Nenhuma chave publicada."
+      - name: Servir Ollama durante o periodo temporario
+        shell: bash
+        run: |
+          echo "Modelo Ollama qwen2.5:0.5b ativo apenas nesta sessao Actions."
+          sleep "$(( DURATION_MINUTES * 60 ))"
+          echo "Sessao terminou. Render retornara ao classificador neural leve."
