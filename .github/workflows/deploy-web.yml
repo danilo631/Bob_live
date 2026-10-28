@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: bob-live-pages
@@ -87,6 +88,23 @@ jobs:
           test -s site/game/index.pck
           echo "Export HTML5 criado:"
           du -h site/game/* | tail -n 12
+
+      - name: Preparar Docker Buildx para imagem web 24h
+        uses: docker/setup-buildx-action@v3
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publicar imagem do jogo Web para VM ARM64 ou AMD64
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.web
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/danilo631/bob-live-web:latest
 
       - name: Enviar artefato Web, mesmo sem Pages ativado
         uses: actions/upload-artifact@v4
